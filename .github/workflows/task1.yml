@@ -1,0 +1,92 @@
+name: 粉丝-聊聊-每4小时执行
+
+on:
+  workflow_dispatch: 
+  schedule:
+    - cron: "0 */4 * * *" # 每4小时执行一次
+
+env:  
+  TZ: Asia/Shanghai
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 检出主仓库 (rendie-node.js)
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # 2. 环境准备
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 3. 启动中转服务 Next.js
+      - name: 下载 rendie-nextjs
+        uses: actions/checkout@v4
+        with:
+          repository: rendie-com/rendie-nextjs
+          token: ${{ secrets.MY_PAT }}
+          path: rendie-nextjs
+          ref: master
+          fetch-depth: 1
+
+      - name: 启动 Next.js
+        run: |   
+          cd ./rendie-nextjs/
+          pnpm i
+          pnpm run dev & 
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PROXY_URL: ${{ secrets.PROXY_URL }}
+          NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
+          NEXTJS_CONFIG_PG01: ${{ secrets.NEXTJS_CONFIG_PG01 }}  
+          NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }} 
+          NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
+
+      # 4. 系统环境补全 (Puppeteer 运行必备)
+      - name: 安装中文字体及依赖
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
+          
+      # 5. 运行 Node 业务逻辑 (任务1)
+      - name: 运行任务1脚本
+        run: |
+          pnpm i
+          node index.js
+        env:
+          # 使用第1组 Secrets
+          MAX_RUNTIME_MINUTES: ${{ secrets.MAX_RUNTIME_1 }}
+          NODE_SHOPEE_NAME: ${{ secrets.NODE_NAME_1 }}
+          NODE_TASK_URL: ${{ secrets.NODE_URL_1 }}
+          NODE_SHOPEE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}  
+          NODE_SHOPEE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
+          
+      # 6. 部署截图到 main 分支 🚀 (存放在 error/task1 目录)
+      - name: Deploy to Main 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: error
+          branch: main
+          target-folder: error/task1
+          commit-message: "logs: 任务1自动保存截图 [skip ci]"
+
+      # 7. 自动清理运行记录
+      - name: 删除运行记录
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          retain_days: 1
+          keep_minimum_runs: 0
