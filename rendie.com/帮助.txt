@@ -1,0 +1,17 @@
+Chrome 浏览器插件 V3 版本 Manifest.json 中 Commands API 字段解析以及对应的类型（Types）、方法（Methods） 和 事件（Events）
+(https://blog.csdn.net/guoqiankunmiss/article/details/135554784)
+
+chrome扩展(插件) V3版本使用
+（https://blog.csdn.net/Laoqina/article/details/134174764）
+
+chrome.declarativeNetRequest API如何使用？----------------------就是修改请求头。如：（“Referer”和“Origin”等等）
+
+
+chrome.declarativeNetRequest API如何使用？                       https://juejin.cn/post/7131360582325780510
+
+翻译后的中文帮助                https://doc.yilijishu.info/chrome/declarativeNetRequest.html
+
+官网帮助        https://github.com/GoogleChrome/chrome-extensions-samples
+
+
+注：rules.json 文件里面seller.shopee.cn的配置没有帮到我。。。。

@@ -1,0 +1,62 @@
+{
+   "EXTENSION_DESCRIPTION": {
+      "message": "读取您的浏览记录，屏蔽所有页面上的内容，显示通知，修改您复制和粘贴的数据，管理您的下载内容"
+   },
+   "EXTENSION_NAME": {
+      "message": "RenDie 插件"
+   },
+   "screenshot_plugin_announce_do_not_show": {
+      "message": "不要再显示该信息"
+   },
+   "screenshot_plugin_close": {
+      "message": "关闭"
+   },
+   "screenshot_plugin_copy": {
+      "message": "复制"
+   },
+   "screenshot_plugin_edit_arrow": {
+      "message": "箭头"
+   },
+   "screenshot_plugin_edit_color": {
+      "message": "颜色"
+   },
+   "screenshot_plugin_edit_line": {
+      "message": "直线"
+   },
+   "screenshot_plugin_edit_marker": {
+      "message": "标记"
+   },
+   "screenshot_plugin_edit_pencil": {
+      "message": "铅笔"
+   },
+   "screenshot_plugin_edit_rect": {
+      "message": "矩形"
+   },
+   "screenshot_plugin_edit_text": {
+      "message": "文本"
+   },
+   "screenshot_plugin_edit_undo": {
+      "message": "撤消"
+   },
+   "screenshot_plugin_print": {
+      "message": "打印"
+   },
+   "screenshot_plugin_save": {
+      "message": "保存"
+   },
+   "screenshot_plugin_share": {
+      "message": "分享"
+   },
+   "screenshot_plugin_share_pinterest": {
+      "message": "在 Pinterest 分享"
+   },
+   "screenshot_plugin_share_twitter": {
+      "message": "通过 Twitter 分享"
+   },
+   "screenshot_plugin_share_vk": {
+      "message": "通过 VK 分享"
+   },
+   "screenshot_plugin_tooltip": {
+      "message": "选择区域"
+   }
+}

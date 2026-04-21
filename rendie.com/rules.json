@@ -1,0 +1,111 @@
+[
+  {
+    "id": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "sec-ch-ua",
+          "operation": "set",
+          "value": "\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\""
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "*"
+    }
+  },
+  {
+    "id": 2,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Content-Type",
+          "operation": "set",
+          "value": "application/json+protobuf"
+        },
+        {
+          "header": "X-Goog-Api-Key",
+          "operation": "set",
+          "value": "AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||translate-pa.googleapis.com/v1/translateHtml"
+    }
+  },
+  {
+    "id": 3,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://air.1688.com/"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://air.1688.com"
+        },
+        {
+          "header": "content-type",
+          "operation": "set",
+          "value": "application/x-www-form-urlencoded"
+        },
+        {
+          "header": "sec-ch-ua-mobile",
+          "operation": "set",
+          "value": "?0"
+        },
+        {
+          "header": "sec-ch-ua-platform",
+          "operation": "set",
+          "value": "\"Windows\""
+        },
+        {
+          "header": "sec-fetch-site",
+          "operation": "set",
+          "value": "same-site"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||h5api.m.1688.com/h5/mtop.1688.trading.dataline.service/1.0"
+    }
+  },
+  {
+    "id": 4,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Referer",
+          "operation": "set",
+          "value": "https://seller.shopee.cn"
+        },
+        {
+          "header": "Origin",
+          "operation": "set",
+          "value": "https://seller.shopee.cn"
+        },
+        {
+          "header": "af-ac-enc-dat",
+          "operation": "set",
+          "value": "null"
+        },
+        {
+          "header": "af-ac-enc-sz-token",
+          "operation": "set",
+          "value": "null"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||seller.shopee.cn/api/mkt/cmt/nominated/nominated_entity_list"
+    }
+  }
+]
