@@ -1,9 +1,8 @@
 name: Deploy to External Repo
 
 on:
-  push:
-    branches:
-      - main
+  # 删除 push 触发，改为手动触发
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -15,18 +14,13 @@ jobs:
       - name: Pushes to another repository
         uses: cpina/github-action-push-to-another-repository@main
         env:
-          # 必须在 Secrets 中配置此 Token
+          # 必须确保在当前仓库的 Settings -> Secrets -> Actions 里配置了 MY_PAT
           API_TOKEN_GITHUB: ${{ secrets.MY_PAT }}
         with:
-          # 源目录，'.' 代表整个项目
           source-directory: '.'
-          # 目标 GitHub 用户名
           destination-github-username: 'rendie-com'
-          # 目标仓库名
           destination-repository-name: 'rendie-chrome'
-          # 目标分支
           target-branch: 'master'
-          # 提交者邮箱
+          user-name: github-actions[bot]
           user-email: github-actions[bot]@users.noreply.github.com
-          # 提交记录信息
           commit-message: "Auto-deploy from source repo: $GITHUB_REF"
