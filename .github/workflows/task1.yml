@@ -58,13 +58,18 @@ jobs:
           
       - name: 运行 粉丝-聊聊 脚本
         run: |
-          # 物理创建目录
+          # 1. 物理创建目录
           mkdir -p error/task1
+          
+          # 2. 运行原本的脚本
           pnpm i
           node index.js
           
-          # 确认文件存在（日志诊断用）
-          echo "📂 检查截图目录内容："
+          # 3. 【新增测试文件】生成一个绝对不会重复的测试文件
+          echo "测试时间: $(date)" > error/task1/test-$(date +%H%M%S).txt
+          
+          # 4. 打印目录确认文件存在
+          echo "📂 当前目录下的文件："
           ls -R error/task1
         env:
           MAX_RUNTIME_MINUTES: 1 # 测试阶段设为 1，正式运行改回 30
