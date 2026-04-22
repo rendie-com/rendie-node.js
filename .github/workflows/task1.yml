@@ -60,9 +60,9 @@ jobs:
           # 1. 物理创建目录
           mkdir -p shopee/error
           
-          # # 2. 运行业务脚本
-          # pnpm i
-          # node index.js
+          # 2. 运行业务脚本
+          pnpm i
+          node index.js
           
           # 3. 强制产生文件差异，确保部署永远生效
           echo "Last Run: $(date)" > shopee/error/sync-check.txt
