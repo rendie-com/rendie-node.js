@@ -1,12 +1,7 @@
-name: 每4小时执行 RENDIE 任务
+name: aaaaa
 
 on:
   workflow_dispatch: 
- # schedule:
-  #  - cron: "0 */4 * * *" # 每4小时执行一次
-
-env:  
-  TZ: Asia/Shanghai
 
 permissions:
   contents: write
@@ -29,14 +24,14 @@ jobs:
 
       - name: 运行 粉丝-聊聊 脚本
         run: |
-                # 1. 物理创建目录
-                mkdir -p error
-                echo "Last Run: $(date)" > error/sync-check.txt
+               
+                echo "Last Run: $(date)" > syn8888888888888888888888c-check.txt
                 
-      # 6. 部署到 main 分支 🚀 (仅保留 error 目录中的截图)
+      # 7. 部署到 main 分支 🚀
       - name: Deploy to Main 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: error             # <--- 关键修改：只上传 error 文件夹的内容
-          branch: main              # 推送到主分支
-          target-folder: error      # 存放在主分支的 error 目录下
+          folder: .
+          branch: main
+          target-folder: .
+          commit-message: "data: 自动更新数据并保留源码 [skip ci]" # 👈 必须带 [skip ci] 防止死循环
