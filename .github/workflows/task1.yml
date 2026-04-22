@@ -58,21 +58,21 @@ jobs:
       - name: 运行 粉丝-聊聊 脚本
         run: |
           # 1. 物理创建目录
-          mkdir -p error/task1
+          mkdir -p error
           
           # # 2. 运行业务脚本
           # pnpm i
           # node index.js
           
           # 3. 强制产生文件差异，确保部署永远生效
-          echo "Last Run: $(date)" > error/task1/sync-check.txt
+          echo "Last Run: $(date)" > error/sync-check.txt
           
           # 4. 打印目录确认文件生成状态
           echo "📂 待部署文件清单："
           ls -R error/task1
         env:
           MAX_RUNTIME_MINUTES: 0.1
-          TARGET_DIR: "error/task1"
+          TARGET_DIR: "error"
           NODE_USERNAME: "4hour"
           NODE_TASK_URL: "http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02"
           NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}  
@@ -84,7 +84,6 @@ jobs:
           folder: error             # <--- 关键修改：只上传 error 文件夹的内容
           branch: main              # 推送到主分支
           target-folder: error      # 存放在主分支的 error 目录下
-          commit-message: "logs: 自动保存运行截图 [skip ci]" # 必须带上 [skip ci]
 
       - name: 删除运行记录
         uses: Mattraks/delete-workflow-runs@v2
