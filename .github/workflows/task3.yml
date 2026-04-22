@@ -16,7 +16,7 @@ jobs:
         uses: cpina/github-action-push-to-another-repository@main
         env:
           # 必须在 Secrets 中配置此 Token
-          API_TOKEN_GITHUB: ${{ secrets.RENDIE_DEPLOY_TOKEN }}
+          API_TOKEN_GITHUB: ${{ secrets.MY_PAT }}
         with:
           # 源目录，'.' 代表整个项目
           source-directory: '.'
