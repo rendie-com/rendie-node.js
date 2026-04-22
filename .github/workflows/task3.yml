@@ -1,26 +1,48 @@
-name: Deploy to External Repo
+name: Sync Shopee Folder
 
 on:
-  # 删除 push 触发，改为手动触发
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout A
         uses: actions/checkout@v4
-
-      - name: Pushes to another repository
-        uses: cpina/github-action-push-to-another-repository@main
-        env:
-          # 必须确保在当前仓库的 Settings -> Secrets -> Actions 里配置了 MY_PAT
-          API_TOKEN_GITHUB: ${{ secrets.MY_PAT }}
         with:
-          source-directory: '.'
-          destination-github-username: 'rendie-com'
-          destination-repository-name: 'rendie-chrome'
-          target-branch: 'master'
-          user-name: github-actions[bot]
-          user-email: github-actions[bot]@users.noreply.github.com
-          commit-message: "Auto-deploy from source repo: $GITHUB_REF"
+          persist-credentials: false
+
+      - name: Sync to B
+        env:
+          TOKEN: ${{ secrets.MY_TOKEN }}
+        run: |
+          # 1. 身份设置
+          git config --global user.name 'rendie-com'
+          git config --global user.email 'admin@rendie.com'
+
+          # 2. 优化：不直接 clone 10G 数据，只建立连接 (极其省时)
+          mkdir target_b && cd target_b
+          git init
+          git remote add origin https://x-access-token:${TOKEN}@github.com/rendie-com/B.git
+          
+          # 只拉取 B 仓库 master 的最新记录，不下载具体文件内容
+          git fetch origin master --depth=1 --no-tags
+          git checkout master
+
+          # 3. 搬运内容：把 A 的 shopee 目录内容塞进去
+          # 注意：此时我们在 target_b 目录里，所以 A 的路径是 ../shopee
+          mkdir -p shopee
+          cp -av ../shopee/. shopee/
+
+          # 4. 推送回 B
+          # 清理默认权限干扰，确保使用 TOKEN 推送
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          
+          git add shopee/
+          if git diff --staged --quiet; then
+            echo "没有变化，跳过推送"
+          else
+            git commit -m "update shopee from A"
+            # 增量推送：Git 会自动计算差异，只上传新增加的那部分图片/文件
+            git push origin master
+          fi

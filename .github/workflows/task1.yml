@@ -31,59 +31,87 @@ jobs:
         with:
           node-version: 22
 
-      # - name: 下载 rendie-nextjs
-      #   uses: actions/checkout@v4
-      #   with:
-      #     repository: rendie-com/rendie-nextjs
-      #     token: ${{ secrets.MY_PAT }}
-      #     path: rendie-nextjs
-      #     ref: master
+      - name: 下载 rendie-nextjs
+        uses: actions/checkout@v4
+        with:
+          repository: rendie-com/rendie-nextjs
+          token: ${{ secrets.MY_PAT }}
+          path: rendie-nextjs
+          ref: master
 
-      # - name: 启动 Next.js
-      #   run: |   
-      #     cd ./rendie-nextjs/
-      #     pnpm i
-      #     pnpm run dev & 
-      #   env:
-      #     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      #     PROXY_URL: ${{ secrets.PROXY_URL }}
-      #     NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
-      #     NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
+      - name: 启动 Next.js
+        run: |   
+          cd ./rendie-nextjs/
+          pnpm i
+          pnpm run dev & 
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PROXY_URL: ${{ secrets.PROXY_URL }}
+          NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
+          NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      # - name: 安装系统依赖
-      #   run: |
-      #     sudo apt-get update -qq
-      #     sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
           
       - name: 运行 粉丝-聊聊 脚本
         run: |
           # 1. 物理创建目录
-          mkdir -p error
+          mkdir -p shopee/error
           
           # # 2. 运行业务脚本
           # pnpm i
           # node index.js
           
           # 3. 强制产生文件差异，确保部署永远生效
-          echo "Last Run: $(date)" > error/sync-check.txt
+          echo "Last Run: $(date)" > shopee/error/sync-check.txt
           
           # 4. 打印目录确认文件生成状态
           echo "📂 待部署文件清单："
-          ls -R error
+          ls -R shopee/error
         env:
           MAX_RUNTIME_MINUTES: 0.1
-          TARGET_DIR: "error"
+          TARGET_DIR: "shopee/error"
           NODE_USERNAME: "4hour"
           NODE_TASK_URL: "http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02"
           NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}  
           NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
           
-      - name: Deploy to Main 🚀
-        uses: JamesIves/github-pages-deploy-action@v4
-        with:
-          folder: error             # <--- 关键修改：只上传 error 文件夹的内容
-          branch: main              # 推送到主分支
-          target-folder: error      # 存放在主分支的 error 目录下
+      - name: Sync to B
+        env:
+          TOKEN: ${{ secrets.MY_TOKEN }}
+        run: |
+          # 1. 身份设置
+          git config --global user.name 'rendie-com'
+          git config --global user.email 'admin@rendie.com'
+
+          # 2. 优化：不直接 clone 10G 数据，只建立连接 (极其省时)
+          mkdir target_b && cd target_b
+          git init
+          git remote add origin https://x-access-token:${TOKEN}@github.com/rendie-com/B.git
+          
+          # 只拉取 B 仓库 master 的最新记录，不下载具体文件内容
+          git fetch origin master --depth=1 --no-tags
+          git checkout master
+
+          # 3. 搬运内容：把 A 的 shopee 目录内容塞进去
+          # 注意：此时我们在 target_b 目录里，所以 A 的路径是 ../shopee
+          mkdir -p shopee
+          cp -av ../shopee/. shopee/
+
+          # 4. 推送回 B
+          # 清理默认权限干扰，确保使用 TOKEN 推送
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          
+          git add shopee/
+          if git diff --staged --quiet; then
+            echo "没有变化，跳过推送"
+          else
+            git commit -m "update shopee from A"
+            # 增量推送：Git 会自动计算差异，只上传新增加的那部分图片/文件
+            git push origin master
+          fi
 
       - name: 删除运行记录
         uses: Mattraks/delete-workflow-runs@v2
