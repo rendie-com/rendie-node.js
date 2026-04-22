@@ -78,19 +78,13 @@ jobs:
           NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}  
           NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
           
-      - name: Deploy Logs 🚀
+      - name: Deploy to Main 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          # 修改点：指向 error 根目录
-          folder: error
-          branch: main
-          # 远程也存放在 error 目录下，这样能保留 task1/task2 等子结构
-          target-folder: error
-          # 强制单次提交覆盖，解决 Git 冲突
-          single-commit: true
-          # 设为 false，防止 task1 运行时删掉 task2 已经上传的截图
-          clean: false 
-          commit-message: "logs: 自动保存运行截图 [skip ci]"
+          folder: error             # <--- 关键修改：只上传 error 文件夹的内容
+          branch: main              # 推送到主分支
+          target-folder: error      # 存放在主分支的 error 目录下
+          commit-message: "logs: 自动保存运行截图 [skip ci]" # 必须带上 [skip ci]
 
       - name: 删除运行记录
         uses: Mattraks/delete-workflow-runs@v2
