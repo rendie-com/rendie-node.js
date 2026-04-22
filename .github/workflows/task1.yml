@@ -1,22 +1,21 @@
 name: 粉丝-聊聊-每4小时执行
 
 on:
-  workflow_dispatch: # 支持手动触发
+  workflow_dispatch: 
   # schedule:
-  #   - cron: "0 */4 * * *" # 定时任务：每4小时运行一次
+  #   - cron: "0 */4 * * *"
 
 env:  
-  TZ: Asia/Shanghai # 统一时区为北京时间
+  TZ: Asia/Shanghai
 
 permissions:
-  contents: write # 赋予推送截图到仓库的权限
-  actions: write  # 赋予管理运行记录的权限
+  contents: write
+  actions: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # 1. 初始化环境
       - name: Checkout 🛎️
         uses: actions/checkout@v4
         with:
@@ -32,7 +31,6 @@ jobs:
         with:
           node-version: 22
 
-      # 2. 拉取私有中转服务代码 (需配置 MY_PAT)
       - name: 下载 rendie-nextjs
         uses: actions/checkout@v4
         with:
@@ -41,55 +39,57 @@ jobs:
           path: rendie-nextjs
           ref: master
 
-      # 3. 启动后台中转服务
       - name: 启动 Next.js
         run: |   
           cd ./rendie-nextjs/
           pnpm i
           pnpm run dev & 
+          sleep 10 # 等待服务启动
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PROXY_URL: ${{ secrets.PROXY_URL }}
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      # 4. 安装 Linux 系统依赖（确保 Puppeteer 正常运行）
       - name: 安装系统依赖
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
           
-      # 5. 执行 RENDIE V5.0 核心逻辑
       - name: 运行 粉丝-聊聊 脚本
         run: |
-          # 物理层创建隔离目录，防止 Deploy 插件找不到路径报错
+          # 物理创建目录
           mkdir -p error/task1
           pnpm i
           node index.js
+          
+          # 确认文件存在（日志诊断用）
+          echo "📂 检查截图目录内容："
+          ls -R error/task1
         env:
-          # 脚本限时：30分钟
-          MAX_RUNTIME_MINUTES: 30
-          # 告诉 index.js 截图存放的确切位置
+          MAX_RUNTIME_MINUTES: 1 # 测试阶段设为 1，正式运行改回 30
           TARGET_DIR: "error/task1"
-          # 任务身份标识
           NODE_USERNAME: "4hour"
-          # 业务 URL
           NODE_TASK_URL: "http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02"
-          # 敏感授权信息
           NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}  
           NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
           
-      # 6. 部署隔离后的截图到 GitHub Pages/Repo
       - name: Deploy Logs 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: error/task1       # 搬运本地这个文件夹的内容
-          branch: main             # 推送到 main 分支
-          target-folder: error/task1 # 远程仓库存储路径
-          commit-message: "logs: 任务1-粉丝聊聊 自动存档 [skip ci]"
-          clean: true              # 每次部署前清理远程目标文件夹
+          # 本地源目录
+          folder: error/task1
+          # 目标分支
+          branch: main
+          # 目标远程目录
+          target-folder: error/task1
+          # --- 关键修复参数 ---
+          # 强制单次提交，解决 fatal: 'main' is already used 冲突
+          single-commit: true
+          # 确保清理掉旧的、不再需要的日志文件
+          clean: true
+          commit-message: "logs: 自动保存截图 [skip ci]"
 
-      # 7. 保持 Actions 界面简洁
       - name: 删除运行记录
         uses: Mattraks/delete-workflow-runs@v2
         with:
