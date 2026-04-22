@@ -39,6 +39,14 @@ jobs:
           path: rendie-nextjs
           ref: master
 
+      - name: 下载 rendie-sqlite3-system
+        uses: actions/checkout@v4
+        with:
+          repository: rendie-com/rendie-sqlite3-system
+          token: ${{ secrets.MY_PAT }}
+          path: sqlite3
+          ref: master
+
       - name: 启动 Next.js
         run: |   
           cd ./rendie-nextjs/
@@ -71,7 +79,7 @@ jobs:
           echo "📂 待部署文件清单："
           ls -R shopee/error
         env:
-          MAX_RUNTIME_MINUTES: 1
+          MAX_RUNTIME_MINUTES: 0.1
           TARGET_DIR: "shopee/error"
           NODE_USERNAME: "4hour"
           NODE_TASK_URL: "http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02"
