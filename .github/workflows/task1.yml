@@ -44,7 +44,7 @@ jobs:
           cd ./rendie-nextjs/
           pnpm i
           pnpm run dev & 
-          sleep 10 # 等待服务启动
+          sleep 10 
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PROXY_URL: ${{ secrets.PROXY_URL }}
@@ -61,18 +61,18 @@ jobs:
           # 1. 物理创建目录
           mkdir -p error/task1
           
-          # 2. 运行原本的脚本
+          # 2. 运行业务脚本
           pnpm i
           node index.js
           
-          # 3. 【新增测试文件】生成一个绝对不会重复的测试文件
-          echo "测试时间: $(date)" > error/task1/test-$(date +%H%M%S).txt
+          # 3. 强制产生文件差异，确保部署永远生效
+          echo "Last Run: $(date)" > error/task1/sync-check.txt
           
-          # 4. 打印目录确认文件存在
-          echo "📂 当前目录下的文件："
+          # 4. 打印目录确认文件生成状态
+          echo "📂 待部署文件清单："
           ls -R error/task1
         env:
-          MAX_RUNTIME_MINUTES: 1 # 测试阶段设为 1，正式运行改回 30
+          MAX_RUNTIME_MINUTES: 30
           TARGET_DIR: "error/task1"
           NODE_USERNAME: "4hour"
           NODE_TASK_URL: "http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02"
@@ -82,18 +82,16 @@ jobs:
       - name: Deploy Logs 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          # 本地源目录
-          folder: error/task1
-          # 目标分支
+          # 修改点：指向 error 根目录
+          folder: error
           branch: main
-          # 目标远程目录
-          target-folder: error/task1
-          # --- 关键修复参数 ---
-          # 强制单次提交，解决 fatal: 'main' is already used 冲突
+          # 远程也存放在 error 目录下，这样能保留 task1/task2 等子结构
+          target-folder: error
+          # 强制单次提交覆盖，解决 Git 冲突
           single-commit: true
-          # 确保清理掉旧的、不再需要的日志文件
-          clean: true
-          commit-message: "logs: 自动保存截图 [skip ci]"
+          # 设为 false，防止 task1 运行时删掉 task2 已经上传的截图
+          clean: false 
+          commit-message: "logs: 自动保存运行截图 [skip ci]"
 
       - name: 删除运行记录
         uses: Mattraks/delete-workflow-runs@v2
