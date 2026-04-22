@@ -33,5 +33,5 @@ jobs:
         with:
           folder: error
           branch: main
-          target-folder: error
+          target-folder: master
           commit-message: "data: 自动更新数据并保留源码 [skip ci]" # 👈 必须带 [skip ci] 防止死循环
