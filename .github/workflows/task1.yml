@@ -45,7 +45,7 @@ jobs:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
           path: sqlite3
-          ref: master
+          ref: main
 
       - name: 启动 Next.js
         run: |   
