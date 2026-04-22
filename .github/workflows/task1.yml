@@ -31,38 +31,38 @@ jobs:
         with:
           node-version: 22
 
-      - name: 下载 rendie-nextjs
-        uses: actions/checkout@v4
-        with:
-          repository: rendie-com/rendie-nextjs
-          token: ${{ secrets.MY_PAT }}
-          path: rendie-nextjs
-          ref: master
+      # - name: 下载 rendie-nextjs
+      #   uses: actions/checkout@v4
+      #   with:
+      #     repository: rendie-com/rendie-nextjs
+      #     token: ${{ secrets.MY_PAT }}
+      #     path: rendie-nextjs
+      #     ref: master
 
-      - name: 启动 Next.js
-        run: |   
-          cd ./rendie-nextjs/
-          pnpm i
-          pnpm run dev & 
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PROXY_URL: ${{ secrets.PROXY_URL }}
-          NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
-          NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
+      # - name: 启动 Next.js
+      #   run: |   
+      #     cd ./rendie-nextjs/
+      #     pnpm i
+      #     pnpm run dev & 
+      #   env:
+      #     GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      #     PROXY_URL: ${{ secrets.PROXY_URL }}
+      #     NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
+      #     NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      - name: 安装系统依赖
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
+      # - name: 安装系统依赖
+      #   run: |
+      #     sudo apt-get update -qq
+      #     sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
           
       - name: 运行 粉丝-聊聊 脚本
         run: |
           # 1. 物理创建目录
           mkdir -p error/task1
           
-          # 2. 运行业务脚本
-          pnpm i
-          node index.js
+          # # 2. 运行业务脚本
+          # pnpm i
+          # node index.js
           
           # 3. 强制产生文件差异，确保部署永远生效
           echo "Last Run: $(date)" > error/task1/sync-check.txt
