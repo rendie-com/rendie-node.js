@@ -24,14 +24,14 @@ jobs:
 
       - name: 运行 粉丝-聊聊 脚本
         run: |
-               
-                echo "Last Run: $(date)" > syn8888888888888888888888c-check.txt
+               mkdir -p error/
+               echo "Last Run: $(date)" > error/syn8888888888888888888888c-check.txt
                 
       # 7. 部署到 main 分支 🚀
       - name: Deploy to Main 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: .
+          folder: error
           branch: main
-          target-folder: .
+          target-folder: error
           commit-message: "data: 自动更新数据并保留源码 [skip ci]" # 👈 必须带 [skip ci] 防止死循环
