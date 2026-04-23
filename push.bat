@@ -22,4 +22,4 @@ git push origin main
 echo.
 echo "✅ All Done!"
 :: 缩短等待时间，或者按任意键退出
-timeout /t 5
+timeout /t 50
