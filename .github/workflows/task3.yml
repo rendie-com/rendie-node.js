@@ -14,7 +14,7 @@ jobs:
 
       - name: Sync to B
         env:
-          TOKEN: ${{ secrets.MY_TOKEN }}
+          TOKEN: ${{ secrets.MY_PAT }}
         run: |
           # 1. 身份设置
           git config --global user.name 'rendie-com'
