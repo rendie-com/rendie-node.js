@@ -21,4 +21,3 @@ git push
 
 echo.
 echo ✅ 推送成功！
-timeout /t 3 >nul
