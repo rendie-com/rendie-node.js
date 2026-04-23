@@ -1,24 +1,22 @@
 @echo off
+:: 1. 确保第一行是这个，且文件保存为 UTF-8 编码
 chcp 65001 >nul
 
 echo 🚀 --- 准备推送 ---
 
-:: 1. 强行清理可能残留的浏览器进程（防止文件占用）
-:: /F 强制 /IM 进程名 /T 包含子进程
+:: 检查进程并清理
 taskkill /F /IM chrome.exe /T >nul 2>&1
-taskkill /F /IM chromedriver.exe /T >nul 2>&1
 
-:: 2. 添加改动，但排除掉正在运行的日志和临时文件
 git add .
 
-:: 3. 提交
+:: 2. 这里的引号和空格要完整
 set datetime=%date% %time%
 git commit -m "Auto sync: %datetime%"
 
-:: 4. 推送
+:: 3. 检查这一行，必须有 echo 关键字
 echo 📤 正在同步至 GitHub...
 git push
 
 echo.
-echo ✅ 推送成功！
-timeout /t 30 >nul
+echo ✅ 全部完成！
+timeout /t 3 >nul
