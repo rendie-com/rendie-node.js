@@ -1,4 +1,6 @@
 
+chcp 65001 >nul
+
 echo "🚀 --- 准备推送 ---"
 git add .
 set "dt=%date% %time%"
