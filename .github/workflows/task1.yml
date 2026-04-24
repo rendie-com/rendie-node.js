@@ -19,18 +19,21 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 🛠️ 安装 pnpm 环境
+      - name: 🛠️ 安装 pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
 
-      - name: 📦 准备 Node 运行时
+      - name: 📦 准备 Node 环境 (双目录缓存)
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
+          # 这样写可以同时监控根目录和子目录的锁文件变动
+          cache-dependency-path: |
+            ./pnpm-lock.yaml
+            rendie-nextjs/pnpm-lock.yaml
 
-      # --- 第一部分：处理 Next.js ---
       - name: 📂 拉取前端核心
         uses: actions/checkout@v4
         with:
@@ -39,46 +42,41 @@ jobs:
           path: rendie-nextjs
           ref: main
 
-      - name: 🌐 缓存 Next 编译产物
+      - name: 🌐 缓存 Next 编译成果
         uses: actions/cache@v4
         with:
           path: rendie-nextjs/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('rendie-nextjs/pnpm-lock.yaml') }}
+          key: ${{ runner.os }}-next-cache-${{ hashFiles('rendie-nextjs/pnpm-lock.yaml') }}
 
-      - name: 🚀 启动 Next.js 服务
-        working-directory: ./rendie-nextjs
+      - name: 🖼️ 补齐系统字体
+        run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
+
+      - name: 🚀 安装并启动服务
         run: |
-          pnpm install --no-frozen-lockfile
-          pnpm run dev &
+          # 1. 严格顺序安装，彻底避免路径冲突报错
+          echo "📦 安装根目录依赖..."
+          pnpm install --frozen-lockfile
+          
+          echo "📦 安装 Next.js 依赖..."
+          cd rendie-nextjs && pnpm install --frozen-lockfile && cd ..
+          
+          echo "🌐 准备浏览器..."
+          npx puppeteer browsers install chrome
+          
+          # 2. 后台启动服务
+          echo "🚀 启动 Next.js..."
+          cd rendie-nextjs && pnpm run dev &
+          
+          # 3. 智能等待
+          echo "⏳ 等待 localhost:3000..."
+          npx wait-on http://localhost:3000 --timeout 120000
+          
+          # 4. 执行脚本
+          echo "🔥 开始运行 index.js"
+          cd .. && node index.js
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
-
-      # --- 第二部分：处理自动化脚本 ---
-      - name: 🖼️ 补齐系统依赖与字体
-        run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
-
-      - name: 🌐 缓存浏览器内核
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/.cache/puppeteer
-          key: ${{ runner.os }}-puppeteer-${{ hashFiles('./pnpm-lock.yaml') }}
-
-      - name: 🤖 执行自动化审计
-        run: |
-          # 1. 在根目录安装脚本依赖
-          pnpm install --frozen-lockfile
-          
-          # 2. 准备浏览器
-          npx puppeteer browsers install chrome
-          
-          # 3. 智能等待端口 (只要 3000 通了就立刻跑 index.js)
-          echo "⏳ 等待 localhost:3000 就绪..."
-          npx wait-on http://localhost:3000 --timeout 120000
-          
-          echo "🔥 端口已通，开始运行 index.js"
-          node index.js
-        env:
           NODE_USERNAME: "admin"
           NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
           NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
