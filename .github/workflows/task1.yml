@@ -1,73 +1,26 @@
-name: 1.shopee/粉丝-4小时
-
-on:
-  workflow_dispatch: 
-
-env:  
-  TZ: Asia/Shanghai
-
-permissions:
-  contents: write
-  actions: write
-
-jobs:
-  automation-task:
-    runs-on: ubuntu-latest
-    steps:
-      - name: ⚙️ 环境初始化
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: 🛠️ 安装 pnpm 环境
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: 📦 准备 Node 运行时
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: 'pnpm'
-
-      - name: 📂 拉取前端核心
-        uses: actions/checkout@v4
-        with:
-          repository: rendie-com/rendie-next.js
-          token: ${{ secrets.MY_PAT }}
-          path: rendie-nextjs
-          ref: main
-
-      - name: 🌐 缓存资产 (浏览器/编译产物)
-        uses: actions/cache@v4
-        with:
-          path: |
-            /home/runner/.cache/puppeteer
-            rendie-nextjs/.next/cache
-          key: ${{ runner.os }}-assets-${{ hashFiles('**/pnpm-lock.yaml') }}
-
-      - name: 🖼️ 补齐系统依赖
-        run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
-
-      - name: ⚡ 极速启动服务
+- name: ⚡ 极速启动服务 (绝对路径模式)
         run: |
-          # 1. 串行安装：先确保所有包都在，避免并行争抢 IO
-          echo "📦 安装依赖中..."
+          # 1. 确保根目录依赖就绪
+          echo "📦 安装根目录依赖..."
           pnpm install --frozen-lockfile
-          pnpm install --dir rendie-nextjs --no-frozen-lockfile
           
-          # 2. 准备浏览器
+          # 2. 确保 Next.js 目录依赖就绪 (显式指定目录)
+          echo "📦 安装 Next.js 依赖..."
+          pnpm install --dir ./rendie-nextjs --no-frozen-lockfile
+          
+          # 3. 预下载浏览器
+          echo "🌐 准备浏览器内核..."
           npx puppeteer browsers install chrome
           
-          # 3. 后台启动 Next.js
-          echo "🚀 启动 Next.js..."
-          pnpm --dir rendie-nextjs run dev & 
+          # 4. 后台启动 Next.js (使用 --dir 确保在子目录运行)
+          echo "🚀 启动服务中..."
+          pnpm --dir ./rendie-nextjs run dev & 
           
-          # 4. 动态等待 (增加到 2 分钟)
-          echo "⏳ 等待 localhost:3000..."
+          # 5. 智能等待 3000 端口 (增加超时到 120s)
+          echo "⏳ 等待 localhost:3000 就绪..."
           npx wait-on http://localhost:3000 --timeout 120000
           
-          echo "🔥 开始运行 index.js"
+          echo "🔥 端口已通，开始运行 index.js"
           node index.js
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
@@ -83,9 +36,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.MY_PAT }}
           GITHUB_OWNER: "rendie-com"
           GITHUB_REPO: "rendie-node.js-error"
-
-      - name: 🧹 清理流水线日志
-        uses: Mattraks/delete-workflow-runs@v2
-        with:
-          retain_days: 1
-          keep_minimum_runs: 0
