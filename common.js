@@ -6,53 +6,57 @@ import { delay, getReadableTimestamp, uploadToGithub } from './utils.js';
 
 puppeteer.use(StealthPlugin());
 
-// 提取环境变量
-const { 
-  MAX_RUNTIME_MINUTES, 
-  TARGET_DIR, 
-  GITHUB_ACTIONS,
-  NODE_USERNAME 
-} = process.env;
-
-// 环境判断：是否在 GitHub Actions 运行
+const { MAX_RUNTIME_MINUTES, TARGET_DIR, GITHUB_ACTIONS, NODE_USERNAME } = process.env;
 const isCI = !!GITHUB_ACTIONS && GITHUB_ACTIONS !== 'false';
 
 export const CONFIG = {
-  // 核心入口：由 index.js 统一调用
   url: "http://localhost:3000/admin.html",
   extensionPath: path.resolve(process.cwd(), 'rendie.com'),
   errorDir: path.resolve(process.cwd(), TARGET_DIR || 'error'),
-  // 运行保底时长转换
   maxRuntimeMs: parseInt(MAX_RUNTIME_MINUTES || 1) * 60 * 1000,
-  checkIntervalMs: 1000, 
+  checkIntervalMs: 1500, // 略微增加间隔，提高稳定性
 };
 
-// 确保截图目录存在
 if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
 
 /**
- * 核心功能：截图并推送到 GitHub 仓库
+ * 带有超时机制的标题获取，防止协议卡死
  */
+async function getTitleSafe(page, timeout = 5000) {
+  let timer;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('TITLE_TIMEOUT')), timeout);
+  });
+
+  try {
+    const title = await Promise.race([page.title(), timeoutPromise]);
+    clearTimeout(timer);
+    return title;
+  } catch (err) {
+    clearTimeout(timer);
+    if (err.message === 'TITLE_TIMEOUT') {
+      console.error("⚠️ [警告] page.title() 响应超时，正在强制截图...");
+      await triggerErrorCapture(page, 'HUNG_DEBUG').catch(() => {});
+      return "STATE_HUNG"; 
+    }
+    throw err;
+  }
+}
+
 export async function triggerErrorCapture(page, typeName) {
   console.log(`\n📸 [${typeName}] 触发自动截图...`);
-  
-  if (!page || page.isClosed()) {
-    console.log("❌ 截图失败：页面已关闭");
-    return;
-  }
+  if (!page || page.isClosed()) return;
 
   const stamp = getReadableTimestamp();
   const fileName = `${typeName}_${stamp}.png`;
   const imgPath = path.join(CONFIG.errorDir, fileName);
 
   try {
-    // 强制等待 500ms 确保渲染完成
     await delay(500);
-    await page.screenshot({ path: imgPath, timeout: 30000 });
-    
+    // 截图增加超时，防止截图本身卡死
+    await page.screenshot({ path: imgPath, timeout: 20000 });
     if (fs.existsSync(imgPath)) {
-      console.log(`✅ 截图已保存: ${fileName} (${(fs.statSync(imgPath).size / 1024).toFixed(2)} KB)`);
-      // 通过 utils.js 上传到指定的错误日志仓库
+      console.log(`✅ 截图保存: ${fileName}`);
       await uploadToGithub(imgPath, fileName);
     }
   } catch (e) {
@@ -60,81 +64,79 @@ export async function triggerErrorCapture(page, typeName) {
   }
 }
 
-/**
- * 安全退出浏览器
- */
 export const silentExit = async (browser) => {
   if (browser?.connected) {
-    console.log("🛑 正在关闭浏览器并释放资源...");
+    console.log("🛑 正在安全关闭浏览器...");
     await browser.close().catch(() => {});
   }
   process.exit(0);
 };
 
-/**
- * 初始化浏览器：针对 CI 环境优化
- */
 export async function initApp() {
-  console.log(`🌐 [${isCI ? 'CI' : 'Local'}] 运行模式 | 用户: ${NODE_USERNAME || 'admin'}`);
+  console.log(`🌐 [${isCI ? 'CI' : 'Local'}] 模式 | 用户: ${NODE_USERNAME || 'admin'}`);
   
   const browser = await puppeteer.launch({
     args: [
       '--no-sandbox', 
       '--disable-setuid-sandbox', 
-      '--disable-dev-shm-usage', // 关键：解决 GitHub Actions 内存限制导致的截图失败
+      '--disable-dev-shm-usage',
       '--disable-blink-features=AutomationControlled',
       `--disable-extensions-except=${CONFIG.extensionPath}`, 
       `--load-extension=${CONFIG.extensionPath}`, 
-      '--lang=zh-CN'
+      '--lang=zh-CN',
+      // 增强稳定性：禁止后台标签页限速
+      '--disable-renderer-backgrounding',
+      '--disable-background-timer-throttling'
     ],
-    // CI 环境使用 new headless 模式，本地使用有头模式调试
     headless: isCI ? "new" : false, 
     defaultViewport: { width: 1920, height: 1080 },
   });
 
   const page = await browser.newPage();
 
-  // 捕获浏览器内部 Console 报错以便调试
+  // 处理 Dialog 弹窗，防止其阻塞 title() 指令
+  page.on('dialog', async dialog => {
+    console.log(`💬 自动处理弹窗: [${dialog.type()}] ${dialog.message()}`);
+    await dialog.dismiss().catch(() => {});
+  });
+
   page.on('console', msg => {
     const text = msg.text();
     if (text.includes('Error') || text.includes('failed')) {
-      console.log(`🖥️  [Browser]: ${text}`);
+      console.log(`🖥️ [Browser]: ${text}`);
     }
   });
 
   return { browser, page, isCI };
 }
 
-/**
- * 核心监控逻辑：轮询页面标题变化
- */
 export async function runMonitor(browser, page) {
   const startTime = Date.now();
   let step = 0;
 
   while (browser.connected) {
     const elapsed = Date.now() - startTime;
-    const isTimeout = elapsed > CONFIG.maxRuntimeMs;
     
     try {
-      // 获取当前标题，若卡死则返回“读取中”
-      const lastTitle = await page.title().catch(() => "读取中...");
+      const lastTitle = await getTitleSafe(page);
 
-      // 日志输出频率控制
-      if (step % 10 === 0) {
+      if (step % 8 === 0) {
         console.log(`[${Math.floor(elapsed/1000)}s] 状态: ${lastTitle}`);
+      }
+
+      if (lastTitle === "STATE_HUNG") {
+        await delay(2000); 
+        continue;
       }
 
       // 业务逻辑判定
       if (lastTitle !== "读取中..." && lastTitle !== "localhost:3000") {
-          // 判定失败
           if (/错误|失败|Error/.test(lastTitle)) {
             await triggerErrorCapture(page, 'BUSINESS_ERROR');
             await silentExit(browser);
             return;
           }
           
-          // 判定成功：匹配你的扩展程序完成后的标题
           if (lastTitle.includes("已完成所有任务")) {
             console.log(`\n✅ 任务圆满结束。`);
             await triggerErrorCapture(page, 'SUCCESS');
@@ -143,11 +145,9 @@ export async function runMonitor(browser, page) {
           }
       }
 
-      // 强制超时保底
-      if (isTimeout) {
-        console.log(`\n⏰ 到达限时，执行超时截图推送...`);
-        await triggerErrorCapture(page, 'TIMEOUT_SNAPSHOT');
-        await delay(5000); 
+      if (elapsed > CONFIG.maxRuntimeMs) {
+        console.log(`\n⏰ 到达限时，执行超时取证...`);
+        await triggerErrorCapture(page, 'TIMEOUT_AUTO');
         await silentExit(browser);
         return;
       }
