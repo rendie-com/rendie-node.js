@@ -15,13 +15,15 @@ export const getReadableTimestamp = () => {
 
 export async function uploadToGithub(localPath, fileName) {
   if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
-    console.error("❌ GitHub 上传变量缺失。");
+    console.error("❌ GitHub 变量未定义，取消上传。");
     return;
   }
   const cloudPath = `${TARGET_DIR || 'error'}/${fileName}`;
 
   try {
     const content = fs.readFileSync(localPath, { encoding: 'base64' });
+    console.log(`🚀 开始上传云端: ${cloudPath} ...`);
+    
     await octokit.repos.createOrUpdateFileContents({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
@@ -30,8 +32,10 @@ export async function uploadToGithub(localPath, fileName) {
       content: content,
       branch: "main"
     });
-    console.log(`☁️  GitHub 上传成功: [${GITHUB_REPO}] -> ${cloudPath}`);
+    
+    console.log(`✅ 云端同步完成！请检查仓库: ${GITHUB_REPO}`);
   } catch (e) {
-    console.error(`❌ GitHub 上传失败: ${e.message}`);
+    console.error(`❌ 云端上传失败详情: ${e.message}`);
+    // 如果报 404，多半是 MY_PAT 权限不够或仓库名写错了
   }
 }

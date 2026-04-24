@@ -17,32 +17,39 @@ export const CONFIG = {
   url: "http://localhost:3000/admin.html",
   extensionPath: path.resolve(process.cwd(), 'rendie.com'),
   errorDir: path.resolve(process.cwd(), TARGET_DIR || 'error'),
-  maxRuntimeMs: parseInt(MAX_RUNTIME_MINUTES || 1) * 60 * 1000, // 默认1分钟测试
+  maxRuntimeMs: parseInt(MAX_RUNTIME_MINUTES || 1) * 60 * 1000,
   checkIntervalMs: 100, 
 };
 
 if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
 
+// 优化后的截图函数，增加 await 强制等待
 async function triggerErrorCapture(page, typeName) {
   if (!page || page.isClosed()) return;
   const stamp = getReadableTimestamp();
   const fileName = `${typeName}_${stamp}.png`;
   const imgPath = path.join(CONFIG.errorDir, fileName);
   try {
-    console.log(`\n📸 监控触发 [${typeName}], 正在截图...`);
+    console.log(`\n📸 [Action] 正在截图: ${fileName}`);
     await page.screenshot({ path: imgPath });
-    console.log(`✅ 截图本地已保存: ${fileName}`);
-    // 关键：必须 await 确保上传到 GitHub 后再关闭浏览器
-    await uploadToGithub(imgPath, fileName);
+    
+    if (fs.existsSync(imgPath)) {
+      console.log(`✅ [Action] 截图本地已保存 (${(fs.statSync(imgPath).size / 1024).toFixed(2)} KB)`);
+      // 必须加上 await，确保上传流程走完
+      await uploadToGithub(imgPath, fileName);
+    }
   } catch (e) {
-    console.error(`\n⚠️ 截图/上传流程异常: ${e.message}`);
+    console.error(`❌ [Action] 截图/上传异常: ${e.message}`);
   }
 }
 
 export const silentExit = async (browser) => {
   if (!isCI) process.stdout.write('\u001B[?25h'); 
   if (browser && browser.connected) {
-    try { await browser.close(); } catch (e) {}
+    try { 
+      console.log("关闭浏览器中...");
+      await browser.close(); 
+    } catch (e) {}
   }
   process.exit(0);
 };
@@ -50,8 +57,14 @@ export const silentExit = async (browser) => {
 export async function initApp() {
   const browser = await puppeteer.launch({
     args: [
-      '--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled',
-      `--disable-extensions-except=${CONFIG.extensionPath}`, `--load-extension=${CONFIG.extensionPath}`, '--lang=zh-CN'
+      '--no-sandbox', 
+      '--disable-setuid-sandbox', 
+      '--disable-blink-features=AutomationControlled',
+      `--disable-extensions-except=${CONFIG.extensionPath}`, 
+      `--load-extension=${CONFIG.extensionPath}`, 
+      '--lang=zh-CN',
+      '--disable-dev-shm-usage', // 核心：解决云端容器内存不足导致的截图卡死
+      '--disable-gpu'            // 云端加速
     ],
     ignoreDefaultArgs: ["--enable-automation"],
     headless: isCI ? "new" : false,
@@ -64,7 +77,6 @@ export async function initApp() {
 export async function runMonitor(browser, page) {
   const startTime = Date.now();
   let step = 0, lastTitle = "载入中...";
-  if (!isCI) process.stdout.write('\u001B[?25l'); 
 
   while (browser.connected) {
     const elapsed = Date.now() - startTime;
@@ -73,7 +85,6 @@ export async function runMonitor(browser, page) {
     try {
       if (step % 10 === 0) lastTitle = await page.title().catch(() => "读取中...");
 
-      // 日志输出：CI环境每10秒打印一次，本地实时刷新
       if (isCI) {
         if (step % 100 === 0) console.log(`[${Math.floor(elapsed/1000)}s] 状态: ${lastTitle}`);
       } else {
@@ -94,8 +105,10 @@ export async function runMonitor(browser, page) {
       }
 
       if (isTimeout) {
-        console.log(`\n⏰ 到达测试限时 (1min), 执行超时截图...`);
+        console.log(`\n⏰ 到达限时，执行超时截图推送...`);
         await triggerErrorCapture(page, '测试超时');
+        // 推送完后多等 3 秒给 GitHub API 缓冲
+        await delay(3000); 
         await silentExit(browser);
         return;
       }
