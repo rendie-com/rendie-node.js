@@ -24,13 +24,11 @@ jobs:
         with:
           version: 9
 
-      - name: 📦 配置根目录缓存 (Node 脚本)
+      - name: 📦 注入 Node 运行时 (开启依赖缓存)
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: 'pnpm'
-          # 指向根目录的锁文件
-          cache-dependency-path: ./pnpm-lock.yaml
 
       - name: 📂 拉取前端核心
         uses: actions/checkout@v4
@@ -40,40 +38,45 @@ jobs:
           path: rendie-nextjs
           ref: main
 
-      - name: ⚙️ 配置子目录缓存 (Next.js)
-        uses: actions/setup-node@v4
+      - name: 🌐 缓存浏览器内核与 Next 产物
+        uses: actions/cache@v4
         with:
-          node-version: 22
-          cache: 'pnpm'
-          # 指向 Next.js 仓库里的锁文件
-          cache-dependency-path: rendie-nextjs/pnpm-lock.yaml
+          path: |
+            /home/runner/.cache/puppeteer
+            rendie-nextjs/.next/cache
+          key: ${{ runner.os }}-assets-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-assets-
 
-      - name: 🚀 极速启动服务
-        working-directory: ./rendie-nextjs
-        run: |   
-          pnpm install --no-frozen-lockfile
-          pnpm run dev & 
-        env:
-          NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
-          NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
+      - name: 🖼️ 快速补齐字体依赖
+        # 去掉 apt-get update，直接安装字体，节省大量网络等待时间
+        run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
 
-      - name: 🖼️ 补齐系统字体与依赖
+      - name: ⚡ 并行启动与准备
+        # 使用 & 符号让服务启动和脚本准备同时进行
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
+          echo "🚀 启动 Next.js 服务中..."
+          (cd rendie-nextjs && pnpm install --no-frozen-lockfile && pnpm run dev) &
           
-      - name: 🤖 执行自动化审计
-        run: |
-          pnpm install --frozen-lockfile
-          npx puppeteer browsers install chrome
+          echo "🤖 准备自动化审计脚本..."
+          pnpm install --frozen-lockfile && npx puppeteer browsers install chrome &
+          
+          echo "⏳ 等待环境就绪..."
+          # 给服务启动预留一点点交叉时间
+          sleep 15
+          
+          echo "🔥 开始运行 index.js"
           node index.js
         env:
+          # Next.js 环境变量
+          NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
+          NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
+          # 脚本环境变量
           NODE_USERNAME: "admin"
           NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
           NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
           NODE_EXPIRES_IN: "1777047860"
           NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
-          
           MAX_RUNTIME_MINUTES: 0.1
           TARGET_DIR: "error/task1"
           GITHUB_ACTIONS: "true"
