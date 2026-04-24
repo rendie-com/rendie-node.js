@@ -1,9 +1,7 @@
-name: 粉丝-聊聊-每4小时执行
+name: task1-粉丝-聊聊-每4小时执行
 
 on:
   workflow_dispatch: 
-  # schedule:
-  #   - cron: "0 */4 * * *"
 
 env:  
   TZ: Asia/Shanghai
@@ -31,19 +29,19 @@ jobs:
         with:
           node-version: 22
 
-      - name: 下载 rendie-nextjs
+      - name: 下载 rendie-next.js
         uses: actions/checkout@v4
         with:
-          repository: rendie-com/rendie-nextjs
-          token: ${{ secrets.MY_PAT }}
+          repository: rendie-com/rendie-next.js
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: rendie-nextjs
-          ref: master
+          ref: main
 
       - name: 下载 rendie-sqlite3-system
         uses: actions/checkout@v4
         with:
           repository: rendie-com/rendie-sqlite3-system
-          token: ${{ secrets.MY_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           path: sqlite3
           ref: main
 
@@ -66,13 +64,17 @@ jobs:
           pnpm i
           node index.js
         env:
-          MAX_RUNTIME_MINUTES: 0.1
-          TARGET_DIR: "shopee/error"
           NODE_USERNAME: "4hour"
-          NODE_TASK_URL: "http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02"
           NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}  
           NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
-          
+          NODE_TASK_URL: "http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02"
+          MAX_RUNTIME_MINUTES: 1
+          TARGET_DIR: "error/task1"
+          GITHUB_ACTIONS: "true"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_OWNER: "rendie-com"
+          GITHUB_REPO: "rendie-node.js-error"
+
       - name: 删除运行记录
         uses: Mattraks/delete-workflow-runs@v2
         with:

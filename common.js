@@ -19,9 +19,11 @@ export const CONFIG = {
   checkIntervalMs: 100, 
 };
 
-if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
+// 使用 recursive: true 确保支持 error/task1 这种嵌套目录的创建
+if (!fs.existsSync(CONFIG.errorDir)) {
+  fs.mkdirSync(CONFIG.errorDir, { recursive: true });
+}
 
-// 截图并触发上传
 async function triggerErrorCapture(page, typeName) {
   const stamp = getReadableTimestamp();
   const fileName = `${typeName}_${stamp}.png`;
@@ -35,7 +37,6 @@ async function triggerErrorCapture(page, typeName) {
   }
 }
 
-// 静默退出
 export const silentExit = async (browser) => {
   process.stdout.write('\u001B[?25h'); 
   if (browser && browser.connected) {
