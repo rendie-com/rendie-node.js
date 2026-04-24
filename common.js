@@ -118,6 +118,7 @@ export async function runMonitor(browser, page) {
     const elapsed = Date.now() - startTime;
     
     try {
+      // 1. 使用安全方式获取标题
       const lastTitle = await getTitleSafe(page);
 
       if (step % 8 === 0) {
@@ -129,31 +130,41 @@ export async function runMonitor(browser, page) {
         continue;
       }
 
-      // 业务逻辑判定
+      // 2. 业务逻辑判定 (保持不变)
       if (lastTitle !== "读取中..." && lastTitle !== "localhost:3000") {
-          if (/错误|失败|Error/.test(lastTitle)) {
-            await triggerErrorCapture(page, 'BUSINESS_ERROR');
-            await silentExit(browser);
-            return;
-          }
-          
-          if (lastTitle.includes("已完成所有任务")) {
-            console.log(`\n✅ 任务圆满结束。`);
-            await triggerErrorCapture(page, 'SUCCESS');
-            await silentExit(browser);
-            return;
-          }
+        if (/错误|失败|Error/.test(lastTitle)) {
+          await triggerErrorCapture(page, 'BUSINESS_ERROR');
+          await silentExit(browser);
+          return;
+        }
+        
+        if (lastTitle.includes("已完成所有任务")) {
+          console.log(`\n✅ 任务圆满结束。`);
+          await triggerErrorCapture(page, 'SUCCESS');
+          await silentExit(browser);
+          return;
+        }
       }
 
-      if (elapsed > CONFIG.maxRuntimeMs) {
-        console.log(`\n⏰ 到达限时，执行超时取证...`);
-        await triggerErrorCapture(page, 'TIMEOUT_AUTO');
-        await silentExit(browser);
-        return;
-      }
     } catch (e) {
-      if (e.message.includes('Target closed')) break;
-      console.error("监控循环异常:", e.message);
+      // --- 关键修复点 ---
+      const errorMsg = e.message;
+      
+      // 如果是框架分离或目标关闭，说明页面正在跳转或刷新
+      if (errorMsg.includes('detached Frame') || errorMsg.includes('Target closed') || errorMsg.includes('Session closed')) {
+        // 降低日志频率，不刷屏
+        if (step % 5 === 0) {
+          console.log("⏳ 页面正在跳转/重定向中，等待稳定...");
+        }
+        // 给页面一点缓冲时间
+        await delay(2000); 
+        
+        // 如果浏览器连接已断开，则退出
+        if (!browser.connected) break;
+        continue; 
+      }
+
+      console.error("监控循环未知异常:", errorMsg);
     }
     
     step++;
