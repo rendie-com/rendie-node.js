@@ -32,6 +32,6 @@ jobs:
 
       - name: 🚀 启动服务与执行脚本
         run: |
-          npm i
           cd rendie-next.js
+          npm i          
           npm run dev
