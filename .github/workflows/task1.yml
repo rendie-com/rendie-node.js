@@ -19,17 +19,18 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 🛠️ 安装 pnpm
+      - name: 🛠️ 安装 pnpm 环境
         uses: pnpm/action-setup@v4
         with:
           version: 9
 
-      - name: 📦 准备 Node 运行时 (已启用缓存)
+      - name: 📦 配置根目录缓存 (Node 脚本)
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          # 现在有了 pnpm-lock.yaml，缓存可以正常工作了
           cache: 'pnpm'
+          # 指向根目录的锁文件
+          cache-dependency-path: ./pnpm-lock.yaml
 
       - name: 📂 拉取前端核心
         uses: actions/checkout@v4
@@ -39,10 +40,18 @@ jobs:
           path: rendie-nextjs
           ref: main
 
+      - name: ⚙️ 配置子目录缓存 (Next.js)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          # 指向 Next.js 仓库里的锁文件
+          cache-dependency-path: rendie-nextjs/pnpm-lock.yaml
+
       - name: 🚀 极速启动服务
         working-directory: ./rendie-nextjs
         run: |   
-          pnpm install --frozen-lockfile
+          pnpm install --no-frozen-lockfile
           pnpm run dev & 
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
@@ -55,7 +64,6 @@ jobs:
           
       - name: 🤖 执行自动化审计
         run: |
-          # 使用 --frozen-lockfile 确保安装速度最快且版本严格一致
           pnpm install --frozen-lockfile
           npx puppeteer browsers install chrome
           node index.js
