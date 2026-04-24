@@ -37,63 +37,48 @@ jobs:
           path: rendie-nextjs
           ref: main
 
-      - name: 下载 rendie-sqlite3-system
-        uses: actions/checkout@v4
-        with:
-          repository: rendie-com/rendie-sqlite3-system
-          token: ${{ secrets.MY_PAT }}
-          path: sqlite3
-          ref: main
-
-      - name: 编译并启动 Next.js (生产模式)
+      - name: 编译并启动 Next.js
         working-directory: ./rendie-nextjs
         run: |   
-          # 1. 强制安装依赖，解决 sh: 1: next: not found
           pnpm install --no-frozen-lockfile
-          
-          # 2. 生产构建（Next.js 16+ 在云端较慢，需耐心等待）
           pnpm run build
-          
-          # 3. 后台启动
           pnpm run start & 
-          
-          # 4. 关键：等待端口真正开放后再往下走
           echo "⏳ 等待 localhost:3000 服务就绪..."
           npx wait-on http://localhost:3000 --timeout 90000
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      - name: 安装系统依赖 (浏览器及中文字体)
+      - name: 安装浏览器系统依赖
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
           
-      - name: 运行 粉丝-聊聊 脚本
+      - name: 运行 index.js 脚本
         run: |
-          # 根目录安装监控脚本依赖
-          pnpm install
-          # 启动监控
+          pnpm install 
           node index.js
         env:
-          # 业务变量
-          NODE_USERNAME: "4hour"
-          NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}  
+          # 核心凭据
+          NODE_USERNAME: "admin"
+          NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
           NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
-          NODE_TASK_URL: "http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02"
+          NODE_EXPIRES_IN: "1777047860"
           
-          # 监控增强变量
-          # 建议设为 3，确保生产模式下 Build + 运行不会因为 1 分钟太短而截不到图
-          MAX_RUNTIME_MINUTES: 3
+          # 业务 JSON 内容
+          NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
+          
+          # 运行配置
+          MAX_RUNTIME_MINUTES: 1
           TARGET_DIR: "error/task1"
           GITHUB_ACTIONS: "true"
           
-          # GitHub 存储变量
+          # 错误截图上传配置
           GITHUB_TOKEN: ${{ secrets.MY_PAT }}
           GITHUB_OWNER: "rendie-com"
           GITHUB_REPO: "rendie-node.js-error"
 
-      - name: 删除运行记录
+      - name: 删除过往运行记录
         uses: Mattraks/delete-workflow-runs@v2
         with:
           retain_days: 1

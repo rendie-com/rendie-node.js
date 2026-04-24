@@ -1,41 +1,70 @@
-import { Octokit } from "@octokit/rest";
 import fs from 'fs';
-import 'dotenv/config';
+import { Octokit } from '@octokit/rest'; // 需要安装: pnpm add @octokit/rest
 
-const { GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, TARGET_DIR } = process.env;
-const octokit = new Octokit({ auth: GITHUB_TOKEN });
-
+/**
+ * 延迟函数
+ * @param {number} ms 毫秒
+ */
 export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+/**
+ * 获取可读的时间戳用于文件名 (格式: 20260424_143005)
+ */
 export const getReadableTimestamp = () => {
   const now = new Date();
-  const f = (n) => String(n).padStart(2, '0');
-  return `${now.getFullYear()}年${f(now.getMonth() + 1)}月${f(now.getDate())}日-${f(now.getHours())}时${f(now.getMinutes())}分${f(now.getSeconds())}秒`;
+  return now.toISOString()
+    .replace(/T/, '_')
+    .replace(/\..+/, '')
+    .replace(/[-:]/g, '');
 };
 
+/**
+ * 将本地截图上传到指定的 GitHub 仓库
+ * @param {string} localPath 本地文件路径
+ * @param {string} fileName 要在 GitHub 上保存的文件名
+ */
 export async function uploadToGithub(localPath, fileName) {
-  if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
-    console.error("❌ GitHub 变量未定义，取消上传。");
+  const { 
+    GITHUB_TOKEN, 
+    GITHUB_OWNER, 
+    GITHUB_REPO, 
+    TARGET_DIR 
+  } = process.env;
+
+  // 如果没有配置 Token，则跳过上传（本地开发模式）
+  if (!GITHUB_TOKEN || GITHUB_TOKEN.startsWith('ghp_***')) {
+    console.log("ℹ️  未检测到有效的 GITHUB_TOKEN，跳过云端上传。");
     return;
   }
-  const cloudPath = `${TARGET_DIR || 'error'}/${fileName}`;
+
+  const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
   try {
     const content = fs.readFileSync(localPath, { encoding: 'base64' });
-    console.log(`🚀 开始上传云端: ${cloudPath} ...`);
     
+    // 构造在仓库中的存储路径 (例如: error/task1/SUCCESS_20260424.png)
+    const githubPath = `${TARGET_DIR || 'error'}/${fileName}`;
+
+    console.log(`🚀 正在上传至 GitHub: ${GITHUB_OWNER}/${GITHUB_REPO}/${githubPath}`);
+
     await octokit.repos.createOrUpdateFileContents({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
-      path: cloudPath,
-      message: `🚨 Error Log: ${fileName}`,
+      path: githubPath,
+      message: `📸 自动截屏提交: ${fileName}`,
       content: content,
-      branch: "main"
+      committer: {
+        name: 'Rendie-Bot',
+        email: 'bot@rendie.com'
+      },
+      author: {
+        name: 'Rendie-Bot',
+        email: 'bot@rendie.com'
+      }
     });
-    
-    console.log(`✅ 云端同步完成！请检查仓库: ${GITHUB_REPO}`);
-  } catch (e) {
-    console.error(`❌ 云端上传失败详情: ${e.message}`);
-    // 如果报 404，多半是 MY_PAT 权限不够或仓库名写错了
+
+    console.log(`✅ GitHub 上传成功！`);
+  } catch (error) {
+    console.error(`❌ GitHub 上传失败: ${error.message}`);
   }
 }
