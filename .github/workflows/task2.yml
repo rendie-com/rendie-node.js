@@ -1,4 +1,4 @@
-name: aaaaa
+name: 用npm运行next.js
 
 on:
   workflow_dispatch: 

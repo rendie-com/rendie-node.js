@@ -1,48 +1,37 @@
-name: Sync Shopee Folder
+name: 用pnpm运行next.js
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: 
+
+permissions:
+  contents: write
+  actions: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout A
+      # 1. 检出当前仓库
+      - name: Checkout 🛎️
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          fetch-depth: 1
 
-      - name: Sync to B
-        env:
-          TOKEN: ${{ secrets.MY_PAT }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📂 拉取前端核心
+        uses: actions/checkout@v4
+        with:
+          repository: rendie-com/rendie-next.js
+          token: ${{ secrets.MY_PAT }}
+          path: rendie-next.js
+          ref: main
+
+      - name: 🚀 启动服务与执行脚本
         run: |
-          # 1. 身份设置
-          git config --global user.name 'rendie-com'
-          git config --global user.email 'admin@rendie.com'
-
-          # 2. 优化：不直接 clone 10G 数据，只建立连接 (极其省时)
-          mkdir target_b && cd target_b
-          git init
-          git remote add origin https://x-access-token:${TOKEN}@github.com/rendie-com/B.git
-          
-          # 只拉取 B 仓库 master 的最新记录，不下载具体文件内容
-          git fetch origin master --depth=1 --no-tags
-          git checkout master
-
-          # 3. 搬运内容：把 A 的 shopee 目录内容塞进去
-          # 注意：此时我们在 target_b 目录里，所以 A 的路径是 ../shopee
-          mkdir -p shopee
-          cp -av ../shopee/. shopee/
-
-          # 4. 推送回 B
-          # 清理默认权限干扰，确保使用 TOKEN 推送
-          git config --local --unset-all http.https://github.com/.extraheader || true
-          
-          git add shopee/
-          if git diff --staged --quiet; then
-            echo "没有变化，跳过推送"
-          else
-            git commit -m "update shopee from A"
-            # 增量推送：Git 会自动计算差异，只上传新增加的那部分图片/文件
-            git push origin master
-          fi
+          cd rendie-next.js
+          npm i          
+          npm run dev
