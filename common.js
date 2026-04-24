@@ -19,9 +19,6 @@ export const CONFIG = {
 
 if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
 
-/**
- * 带有超时竞争的标题获取
- */
 async function getTitleSafe(page, timeout = 5000) {
   let timer;
   const timeoutPromise = new Promise((_, reject) => {
@@ -35,7 +32,7 @@ async function getTitleSafe(page, timeout = 5000) {
   } catch (err) {
     clearTimeout(timer);
     if (err.message === 'TITLE_TIMEOUT') {
-      console.error("⚠️ page.title() 响应超时，正在取证...");
+      console.error("⚠️ 标题获取超时，正在紧急截图...");
       await triggerErrorCapture(page, 'HUNG_DEBUG').catch(() => {});
       return "STATE_HUNG"; 
     }
@@ -55,7 +52,7 @@ export async function triggerErrorCapture(page, typeName) {
     await delay(500);
     await page.screenshot({ path: imgPath, timeout: 20000 });
     if (fs.existsSync(imgPath)) {
-      console.log(`✅ 截图保存: ${fileName}`);
+      console.log(`✅ 截图已保存: ${fileName}`);
       await uploadToGithub(imgPath, fileName);
     }
   } catch (e) {
@@ -87,10 +84,8 @@ export async function initApp() {
   });
 
   const page = await browser.newPage();
-
-  // 处理可能导致死锁的弹窗
   page.on('dialog', async dialog => {
-    console.log(`💬 自动处理弹窗: ${dialog.message()}`);
+    console.log(`💬 弹窗拦截: ${dialog.message()}`);
     await dialog.dismiss().catch(() => {});
   });
 
@@ -101,6 +96,8 @@ export async function runMonitor(browser, page) {
   const startTime = Date.now();
   let step = 0;
 
+  console.log("🚀 监控启动...");
+
   while (browser.connected) {
     const elapsed = Date.now() - startTime;
     
@@ -108,43 +105,43 @@ export async function runMonitor(browser, page) {
       const lastTitle = await getTitleSafe(page);
 
       if (step % 10 === 0) {
-        console.log(`[${Math.floor(elapsed/1000)}s] 状态: ${lastTitle}`);
+        console.log(`[${Math.floor(elapsed/1000)}s] 实时状态: ${lastTitle}`);
       }
 
-      if (lastTitle === "STATE_HUNG") {
-        await delay(2000); 
-        continue;
+      // 1. 只要标题包含“错误、失败、Error、Exception”，立即截图
+      if (lastTitle !== "STATE_HUNG" && /错误|失败|Error|Exception|404|500/.test(lastTitle)) {
+          console.log(`🚨 检测到异常标题: "${lastTitle}"`);
+          await triggerErrorCapture(page, 'PAGE_REPORTED_ERROR');
+          // 截图后可以选择继续监控或直接退出，这里推荐退出防止重复截图
+          await silentExit(browser);
+          return;
       }
 
-      // 业务逻辑判定
-      if (lastTitle !== "读取中..." && lastTitle !== "localhost:3000") {
-          if (/错误|失败|Error/.test(lastTitle)) {
-            await triggerErrorCapture(page, 'BUSINESS_ERROR');
-            await silentExit(browser);
-            return;
-          }
-          if (lastTitle.includes("已完成所有任务")) {
-            console.log(`\n✅ 任务圆满结束。`);
-            await triggerErrorCapture(page, 'SUCCESS');
-            await silentExit(browser);
-            return;
-          }
+      // 2. 正常成功判定
+      if (lastTitle.includes("已完成所有任务") || lastTitle.includes("SUCCESS")) {
+          console.log(`\n✅ 任务圆满结束。`);
+          await triggerErrorCapture(page, 'SUCCESS_DONE');
+          await silentExit(browser);
+          return;
       }
 
+      // 3. 超时保底
       if (elapsed > CONFIG.maxRuntimeMs) {
-        console.log(`\n⏰ 到达限时，执行超时取证...`);
-        await triggerErrorCapture(page, 'TIMEOUT_AUTO');
+        console.log(`\n⏰ 到达限时...`);
+        await triggerErrorCapture(page, 'AUTO_TIMEOUT');
         await silentExit(browser);
         return;
       }
+
     } catch (e) {
       const msg = e.message;
-      // 关键修复：静默处理框架失效错误
-      if (msg.includes('detached Frame') || msg.includes('Target closed') || msg.includes('Execution context was destroyed')) {
+      if (msg.includes('detached Frame') || msg.includes('Target closed') || msg.includes('destroyed')) {
         if (step % 5 === 0) console.log("⏳ 页面环境重定向中，等待稳定...");
         await delay(2000);
         continue; 
       }
+      // 捕获到未知的 Promise 异常也触发一次截图
+      await triggerErrorCapture(page, 'RUNTIME_EXCEPTION').catch(() => {});
       console.error("监控循环异常:", msg);
     }
     
