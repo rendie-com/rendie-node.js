@@ -37,6 +37,14 @@ jobs:
           path: rendie-nextjs
           ref: main
 
+      - name: 下载 rendie-sqlite3-system
+        uses: actions/checkout@v4
+        with:
+          repository: rendie-com/rendie-sqlite3-system
+          token: ${{ secrets.MY_PAT }}
+          path: sqlite3
+          ref: main
+
       - name: 编译并启动 Next.js
         working-directory: ./rendie-nextjs
         run: |   
