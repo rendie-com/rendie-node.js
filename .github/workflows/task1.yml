@@ -45,23 +45,34 @@ jobs:
           path: sqlite3
           ref: main
 
-      - name: 启动 Next.js
+      - name: 编译并启动 Next.js (生产模式)
+        # 使用 working-directory 确保所有指令都在正确目录下执行
+        working-directory: ./rendie-nextjs
         run: |   
-          cd ./rendie-nextjs/
+          # 1. 强制安装依赖，解决 sh: 1: next: not found 问题
+          pnpm install --no-frozen-lockfile
+          
+          # 2. 生产环境构建 (耗时约 1-2 分钟，但后续运行极其稳定)
           pnpm run build
-          pnpm run start &
+          
+          # 3. 后台启动生产服务器
+          pnpm run start & 
+          
+          # 4. 等待端口响应，确保服务已完全就绪
+          echo "⏳ 等待 localhost:3000 就绪..."
+          npx wait-on http://localhost:3000 --timeout 60000
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      - name: 安装系统依赖
+      - name: 安装系统依赖 (浏览器驱动)
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
           
       - name: 运行 粉丝-聊聊 脚本
         run: |
-          pnpm i
+          pnpm install
           node index.js
         env:
           # 核心业务变量
@@ -71,11 +82,12 @@ jobs:
           NODE_TASK_URL: "http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02"
           
           # 运行监控变量
-          MAX_RUNTIME_MINUTES: 1
+          # 由于增加了 Build 步骤，建议给脚本预留 3 分钟运行时间
+          MAX_RUNTIME_MINUTES: 3
           TARGET_DIR: "error/task1"
           GITHUB_ACTIONS: "true"
           
-          # GitHub 上传变量 (已全部改用 MY_PAT)
+          # GitHub 上传变量
           GITHUB_TOKEN: ${{ secrets.MY_PAT }}
           GITHUB_OWNER: "rendie-com"
           GITHUB_REPO: "rendie-node.js-error"
