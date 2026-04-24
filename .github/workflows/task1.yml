@@ -48,8 +48,8 @@ jobs:
       - name: 启动 Next.js
         run: |   
           cd ./rendie-nextjs/
-          pnpm i
-          pnpm run dev & 
+          pnpm run build
+          pnpm run start &
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
