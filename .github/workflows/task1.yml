@@ -46,7 +46,8 @@ jobs:
         run: |
           npm i
           cd rendie-nextjs
-          npm run dev &
+          npm run dev
+          
           cd ..
           npx puppeteer browsers install chrome
           node index.js
