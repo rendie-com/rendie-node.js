@@ -11,7 +11,7 @@ permissions:
   actions: write
 
 jobs:
-  automation-task:
+  automation:
     runs-on: ubuntu-latest
     steps:
       - name: ⚙️ 环境初始化
@@ -30,6 +30,7 @@ jobs:
           node-version: 22
           cache: 'pnpm'
 
+      # --- 第一部分：处理 Next.js ---
       - name: 📂 拉取前端核心
         uses: actions/checkout@v4
         with:
@@ -38,58 +39,54 @@ jobs:
           path: rendie-nextjs
           ref: main
 
-      - name: 🌐 缓存资产 (浏览器/编译产物)
+      - name: 🌐 缓存 Next 编译产物
         uses: actions/cache@v4
         with:
-          path: |
-            /home/runner/.cache/puppeteer
-            rendie-nextjs/.next/cache
-          key: ${{ runner.os }}-assets-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-assets-
+          path: rendie-nextjs/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('rendie-nextjs/pnpm-lock.yaml') }}
 
-      - name: 🖼️ 补齐系统依赖
-        # 不跑 update 直接安装，确保中文字体可用
+      - name: 🚀 启动 Next.js 服务
+        working-directory: ./rendie-nextjs
+        run: |
+          pnpm install --no-frozen-lockfile
+          pnpm run dev &
+        env:
+          NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
+          NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
+
+      # --- 第二部分：处理自动化脚本 ---
+      - name: 🖼️ 补齐系统依赖与字体
         run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
 
-      - name: ⚡ 极速启动服务 (绝对路径锁定模式)
+      - name: 🌐 缓存浏览器内核
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/puppeteer
+          key: ${{ runner.os }}-puppeteer-${{ hashFiles('./pnpm-lock.yaml') }}
+
+      - name: 🤖 执行自动化审计
         run: |
-          # 1. 确保根目录依赖就绪
-          echo "📦 正在安装根目录依赖..."
+          # 1. 在根目录安装脚本依赖
           pnpm install --frozen-lockfile
           
-          # 2. 确保 Next.js 目录依赖就绪 (使用 --dir 强制指向子目录)
-          echo "📦 正在安装 Next.js 依赖..."
-          pnpm install --dir ./rendie-nextjs --no-frozen-lockfile
-          
-          # 3. 预下载浏览器内核
-          echo "🌐 准备浏览器内核..."
+          # 2. 准备浏览器
           npx puppeteer browsers install chrome
           
-          # 4. 后台启动 Next.js (锁定在子目录运行)
-          echo "🚀 启动服务中..."
-          pnpm --dir ./rendie-nextjs run dev & 
-          
-          # 5. 智能等待：端口通了立刻开始，最长等 120 秒
+          # 3. 智能等待端口 (只要 3000 通了就立刻跑 index.js)
           echo "⏳ 等待 localhost:3000 就绪..."
           npx wait-on http://localhost:3000 --timeout 120000
           
           echo "🔥 端口已通，开始运行 index.js"
           node index.js
         env:
-          NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
-          NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
           NODE_USERNAME: "admin"
           NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
           NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
           NODE_EXPIRES_IN: "1777047860"
           NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
-          
           MAX_RUNTIME_MINUTES: 0.1
           TARGET_DIR: "error/task1"
           GITHUB_ACTIONS: "true"
-          
-          # 截图上传配置
           GITHUB_TOKEN: ${{ secrets.MY_PAT }}
           GITHUB_OWNER: "rendie-com"
           GITHUB_REPO: "rendie-node.js-error"
