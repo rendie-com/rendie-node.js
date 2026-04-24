@@ -6,7 +6,6 @@ import {
 (async () => {
   let { browser, page, isCI } = await initApp();
 
-  // 信号拦截
   process.on('SIGINT', () => silentExit(browser));
   process.on('SIGTERM', () => silentExit(browser));
 
@@ -31,12 +30,9 @@ import {
       } catch (err) {
         if (err.message.includes('context') || err.message.includes('Execution')) {
           setTimeout(startMonitoring, 100);
-        } else {
-          // 任何其他非跳转错误，直接杀掉进程
-          if (browser && browser.connected) {
-            console.error(`\n🚨 脚本异常终止: ${err.message}`);
-            await silentExit(browser);
-          }
+        } else if (browser && browser.connected) {
+          console.error(`\n🚨 脚本异常终止: ${err.message}`);
+          await silentExit(browser);
         }
       }
     };
@@ -45,6 +41,6 @@ import {
 
   } catch (err) {
     console.error("\n🚨 初始化失败:", err.message);
-    await silentExit(browser);
+    if (browser) await silentExit(browser);
   }
 })();
