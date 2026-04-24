@@ -24,11 +24,11 @@ jobs:
         with:
           version: 9
 
-      - name: 📦 准备 Node 运行时 (开启缓存)
+      - name: 📦 准备 Node 运行时
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'pnpm'
+          # 移除 cache: 'pnpm'，避免因找不到 lock 文件报错
 
       - name: 📂 拉取前端核心
         uses: actions/checkout@v4
@@ -54,7 +54,8 @@ jobs:
           
       - name: 🤖 执行自动化审计
         run: |
-          pnpm install 
+          # 即使没有 lock 文件，--no-frozen-lockfile 也能保证安装成功
+          pnpm install --no-frozen-lockfile
           npx puppeteer browsers install chrome
           node index.js
         env:
