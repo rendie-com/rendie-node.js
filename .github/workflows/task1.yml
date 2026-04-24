@@ -49,24 +49,22 @@ jobs:
             ${{ runner.os }}-assets-
 
       - name: 🖼️ 快速补齐字体依赖
+        # 直接安装，不跑 update 节省 15s+
         run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
 
-      - name: ⚡ 极速启动服务 (并行模式)
+      - name: ⚡ 极速启动服务 (并行锁定模式)
         run: |
-          # 1. 后台启动 Next.js
-          cd rendie-nextjs
-          pnpm install --no-frozen-lockfile
-          pnpm run dev & 
+          # 1. 启动 Next.js 服务 (使用 --dir 锁定子目录，不影响主进程路径)
+          pnpm install --dir rendie-nextjs --no-frozen-lockfile && pnpm --dir rendie-nextjs run dev & 
           
-          # 2. 回到根目录准备脚本环境 (并行)
-          cd ..
+          # 2. 准备脚本环境 (在当前根目录执行)
           pnpm install --frozen-lockfile && npx puppeteer browsers install chrome &
           
-          # 3. 动态等待：不再死等 15 秒，只要 3000 端口通了立刻执行
-          echo "⏳ 等待 localhost:3000 就绪..."
+          # 3. 动态等待：3000 端口一通立刻起飞
+          echo "⏳ 等待 localhost:3000 服务就绪..."
           npx wait-on http://localhost:3000 --timeout 60000
           
-          echo "🔥 端口已通，立即执行脚本"
+          echo "🔥 端口已通，开始运行 index.js"
           node index.js
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
