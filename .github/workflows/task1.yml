@@ -19,16 +19,16 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 🛠️ 安装 pnpm 环境
+      - name: 🛠️ 安装 pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 9
 
-      - name: 📦 注入 Node 运行时 (开启缓存)
+      - name: 📦 准备 Node 运行时 (已启用缓存)
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          # 核心优化：现在有了锁文件，这里会自动加速
+          # 现在有了 pnpm-lock.yaml，缓存可以正常工作了
           cache: 'pnpm'
 
       - name: 📂 拉取前端核心
@@ -42,7 +42,7 @@ jobs:
       - name: 🚀 极速启动服务
         working-directory: ./rendie-nextjs
         run: |   
-          pnpm install --no-frozen-lockfile
+          pnpm install --frozen-lockfile
           pnpm run dev & 
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
@@ -55,9 +55,8 @@ jobs:
           
       - name: 🤖 执行自动化审计
         run: |
-          # 使用 --frozen-lockfile 确保 100% 还原本地依赖环境
+          # 使用 --frozen-lockfile 确保安装速度最快且版本严格一致
           pnpm install --frozen-lockfile
-          # 确保浏览器内核就绪
           npx puppeteer browsers install chrome
           node index.js
         env:
@@ -67,12 +66,9 @@ jobs:
           NODE_EXPIRES_IN: "1777047860"
           NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
           
-          # 极速运行配置
           MAX_RUNTIME_MINUTES: 0.1
           TARGET_DIR: "error/task1"
           GITHUB_ACTIONS: "true"
-          
-          # 截图自动化上传配置
           GITHUB_TOKEN: ${{ secrets.MY_PAT }}
           GITHUB_OWNER: "rendie-com"
           GITHUB_REPO: "rendie-node.js-error"
