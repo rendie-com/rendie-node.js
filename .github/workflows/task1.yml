@@ -24,7 +24,7 @@ jobs:
         with:
           version: 9
 
-      - name: 📦 注入 Node 运行时
+      - name: 📦 准备 Node 运行时
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -38,33 +38,36 @@ jobs:
           path: rendie-nextjs
           ref: main
 
-      - name: 🌐 缓存浏览器内核与 Next 产物
+      - name: 🌐 缓存资产 (浏览器/编译产物)
         uses: actions/cache@v4
         with:
           path: |
             /home/runner/.cache/puppeteer
             rendie-nextjs/.next/cache
           key: ${{ runner.os }}-assets-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-assets-
 
-      - name: 🖼️ 快速补齐字体依赖
-        # 直接安装，不跑 update 节省 15s+
+      - name: 🖼️ 补齐系统依赖
         run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
 
-      - name: ⚡ 极速启动服务 (并行锁定模式)
+      - name: ⚡ 极速启动服务
         run: |
-          # 1. 启动 Next.js 服务 (使用 --dir 锁定子目录，不影响主进程路径)
-          pnpm install --dir rendie-nextjs --no-frozen-lockfile && pnpm --dir rendie-nextjs run dev & 
+          # 1. 串行安装：先确保所有包都在，避免并行争抢 IO
+          echo "📦 安装依赖中..."
+          pnpm install --frozen-lockfile
+          pnpm install --dir rendie-nextjs --no-frozen-lockfile
           
-          # 2. 准备脚本环境 (在当前根目录执行)
-          pnpm install --frozen-lockfile && npx puppeteer browsers install chrome &
+          # 2. 准备浏览器
+          npx puppeteer browsers install chrome
           
-          # 3. 动态等待：3000 端口一通立刻起飞
-          echo "⏳ 等待 localhost:3000 服务就绪..."
-          npx wait-on http://localhost:3000 --timeout 60000
+          # 3. 后台启动 Next.js
+          echo "🚀 启动 Next.js..."
+          pnpm --dir rendie-nextjs run dev & 
           
-          echo "🔥 端口已通，开始运行 index.js"
+          # 4. 动态等待 (增加到 2 分钟)
+          echo "⏳ 等待 localhost:3000..."
+          npx wait-on http://localhost:3000 --timeout 120000
+          
+          echo "🔥 开始运行 index.js"
           node index.js
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
