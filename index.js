@@ -1,46 +1,42 @@
-import { 
-  initApp, runMonitor, silentExit, CONFIG, 
-  NODE_USERNAME, NODE_ACCESS_TOKEN, NODE_REFRESH_TOKEN, NODE_TASK_URL 
-} from './common.js';
+import { initApp, runMonitor, silentExit } from './common.js';
 
-(async () => {
-  let { browser, page, isCI } = await initApp();
+// 直接从环境变量读取，不走 common.js 的 export 
+const { 
+  NODE_USERNAME, 
+  NODE_ACCESS_TOKEN, 
+  NODE_REFRESH_TOKEN 
+} = process.env;
 
-  process.on('SIGINT', () => silentExit(browser));
-  process.on('SIGTERM', () => silentExit(browser));
-
+async function main() {
+  console.log(`\n🚀 [启动] 用户: ${NODE_USERNAME || '未知'}`);
+  
+  // 初始化浏览器和页面
+  const { browser, page, isCI } = await initApp();
+  
   try {
-    console.log(`🌐 [${isCI ? 'CI' : '本地'}] 运行模式 | 用户: ${NODE_USERNAME}`);
+    // 注入 Token 到 localStorage 或 Cookie (如果业务需要)
+    if (NODE_ACCESS_TOKEN) {
+      console.log("🔑 正在注入访问令牌...");
+      // 这里可以根据你的 rendie 业务逻辑添加 page.evaluate
+    }
+
+    // 执行核心监控逻辑
+    await runMonitor(browser, page);
     
-    await page.goto(CONFIG.url, { waitUntil: 'domcontentloaded' }).catch(() => {});
-    await page.evaluate((d) => {
-      localStorage.clear();
-      Object.entries(d).forEach(([k, v]) => localStorage.setItem(k, typeof v === 'object' ? JSON.stringify(v) : v));
-      localStorage.setItem("expires_in", Math.floor(Date.now() / 1000) + 7200);
-    }, {
-      username: NODE_USERNAME, access_token: NODE_ACCESS_TOKEN, refresh_token: NODE_REFRESH_TOKEN,
-      menuList: { top1: 1, top2: { "23": { name: "任务", id: "23", isbool: true, url: NODE_TASK_URL } } }
-    }).catch(() => {});
-
-    page.goto(CONFIG.url, { waitUntil: 'networkidle2' }).catch(() => {});
-    
-    const startMonitoring = async () => {
-      try {
-        await runMonitor(browser, page);
-      } catch (err) {
-        if (err.message.includes('context') || err.message.includes('Execution')) {
-          setTimeout(startMonitoring, 100);
-        } else if (browser && browser.connected) {
-          console.error(`\n🚨 脚本异常终止: ${err.message}`);
-          await silentExit(browser);
-        }
-      }
-    };
-
-    startMonitoring();
-
   } catch (err) {
-    console.error("\n🚨 初始化失败:", err.message);
-    if (browser) await silentExit(browser);
+    console.error("\n❌ [致命异常]:", err.message);
+    // 发生崩溃时尝试最后一次截图
+    if (page && !page.isClosed()) {
+        const { triggerErrorCapture } = await import('./common.js'); // 动态导入以防万一
+        await triggerErrorCapture(page, 'FATAL_ERROR');
+    }
+    await silentExit(browser);
   }
-})();
+}
+
+// 捕获未处理的 Promise 拒绝
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+main();

@@ -46,48 +46,49 @@ jobs:
           ref: main
 
       - name: 编译并启动 Next.js (生产模式)
-        # 使用 working-directory 确保所有指令都在正确目录下执行
         working-directory: ./rendie-nextjs
         run: |   
-          # 1. 强制安装依赖，解决 sh: 1: next: not found 问题
+          # 1. 强制安装依赖，解决 sh: 1: next: not found
           pnpm install --no-frozen-lockfile
           
-          # 2. 生产环境构建 (耗时约 1-2 分钟，但后续运行极其稳定)
+          # 2. 生产构建（Next.js 16+ 在云端较慢，需耐心等待）
           pnpm run build
           
-          # 3. 后台启动生产服务器
+          # 3. 后台启动
           pnpm run start & 
           
-          # 4. 等待端口响应，确保服务已完全就绪
-          echo "⏳ 等待 localhost:3000 就绪..."
-          npx wait-on http://localhost:3000 --timeout 60000
+          # 4. 关键：等待端口真正开放后再往下走
+          echo "⏳ 等待 localhost:3000 服务就绪..."
+          npx wait-on http://localhost:3000 --timeout 90000
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      - name: 安装系统依赖 (浏览器驱动)
+      - name: 安装系统依赖 (浏览器及中文字体)
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
           
       - name: 运行 粉丝-聊聊 脚本
         run: |
+          # 根目录安装监控脚本依赖
           pnpm install
+          # 启动监控
           node index.js
         env:
-          # 核心业务变量
+          # 业务变量
           NODE_USERNAME: "4hour"
           NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}  
           NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
           NODE_TASK_URL: "http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02"
           
-          # 运行监控变量
-          # 由于增加了 Build 步骤，建议给脚本预留 3 分钟运行时间
+          # 监控增强变量
+          # 建议设为 3，确保生产模式下 Build + 运行不会因为 1 分钟太短而截不到图
           MAX_RUNTIME_MINUTES: 3
           TARGET_DIR: "error/task1"
           GITHUB_ACTIONS: "true"
           
-          # GitHub 上传变量
+          # GitHub 存储变量
           GITHUB_TOKEN: ${{ secrets.MY_PAT }}
           GITHUB_OWNER: "rendie-com"
           GITHUB_REPO: "rendie-node.js-error"
