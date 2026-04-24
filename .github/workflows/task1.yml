@@ -24,7 +24,7 @@ jobs:
         with:
           version: 9
 
-      - name: 📦 注入 Node 运行时 (开启依赖缓存)
+      - name: 📦 注入 Node 运行时
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -49,29 +49,28 @@ jobs:
             ${{ runner.os }}-assets-
 
       - name: 🖼️ 快速补齐字体依赖
-        # 去掉 apt-get update，直接安装字体，节省大量网络等待时间
         run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
 
-      - name: ⚡ 并行启动与准备
-        # 使用 & 符号让服务启动和脚本准备同时进行
+      - name: ⚡ 极速启动服务 (并行模式)
         run: |
-          echo "🚀 启动 Next.js 服务中..."
-          (cd rendie-nextjs && pnpm install --no-frozen-lockfile && pnpm run dev) &
+          # 1. 后台启动 Next.js
+          cd rendie-nextjs
+          pnpm install --no-frozen-lockfile
+          pnpm run dev & 
           
-          echo "🤖 准备自动化审计脚本..."
+          # 2. 回到根目录准备脚本环境 (并行)
+          cd ..
           pnpm install --frozen-lockfile && npx puppeteer browsers install chrome &
           
-          echo "⏳ 等待环境就绪..."
-          # 给服务启动预留一点点交叉时间
-          sleep 15
+          # 3. 动态等待：不再死等 15 秒，只要 3000 端口通了立刻执行
+          echo "⏳ 等待 localhost:3000 就绪..."
+          npx wait-on http://localhost:3000 --timeout 60000
           
-          echo "🔥 开始运行 index.js"
+          echo "🔥 端口已通，立即执行脚本"
           node index.js
         env:
-          # Next.js 环境变量
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
-          # 脚本环境变量
           NODE_USERNAME: "admin"
           NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
           NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
