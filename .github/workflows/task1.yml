@@ -19,16 +19,17 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 🛠️ 安装 pnpm
+      - name: 🛠️ 安装 pnpm 环境
         uses: pnpm/action-setup@v4
         with:
           version: 9
 
-      - name: 📦 准备 Node 运行时
+      - name: 📦 注入 Node 运行时 (开启缓存)
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          # 移除 cache: 'pnpm'，避免因找不到 lock 文件报错
+          # 核心优化：现在有了锁文件，这里会自动加速
+          cache: 'pnpm'
 
       - name: 📂 拉取前端核心
         uses: actions/checkout@v4
@@ -54,8 +55,9 @@ jobs:
           
       - name: 🤖 执行自动化审计
         run: |
-          # 即使没有 lock 文件，--no-frozen-lockfile 也能保证安装成功
-          pnpm install --no-frozen-lockfile
+          # 使用 --frozen-lockfile 确保 100% 还原本地依赖环境
+          pnpm install --frozen-lockfile
+          # 确保浏览器内核就绪
           npx puppeteer browsers install chrome
           node index.js
         env:
@@ -65,9 +67,12 @@ jobs:
           NODE_EXPIRES_IN: "1777047860"
           NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
           
+          # 极速运行配置
           MAX_RUNTIME_MINUTES: 0.1
           TARGET_DIR: "error/task1"
           GITHUB_ACTIONS: "true"
+          
+          # 截图自动化上传配置
           GITHUB_TOKEN: ${{ secrets.MY_PAT }}
           GITHUB_OWNER: "rendie-com"
           GITHUB_REPO: "rendie-node.js-error"
