@@ -19,20 +19,17 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 🛠️ 安装 pnpm
+      - name: 🛠️ 安装 pnpm (仅用于根目录脚本)
         uses: pnpm/action-setup@v4
         with:
           version: 9
 
-      - name: 📦 准备 Node 环境 (双目录缓存)
+      - name: 📦 准备 Node 环境
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          # 仅对根目录 pnpm 开启缓存，npm 部分暂不开启以防路径混淆
           cache: 'pnpm'
-          # 这样写可以同时监控根目录和子目录的锁文件变动
-          cache-dependency-path: |
-            ./pnpm-lock.yaml
-            rendie-nextjs/pnpm-lock.yaml
 
       - name: 📂 拉取前端核心
         uses: actions/checkout@v4
@@ -42,38 +39,17 @@ jobs:
           path: rendie-nextjs
           ref: main
 
-      - name: 🌐 缓存 Next 编译成果
-        uses: actions/cache@v4
-        with:
-          path: rendie-nextjs/.next/cache
-          key: ${{ runner.os }}-next-cache-${{ hashFiles('rendie-nextjs/pnpm-lock.yaml') }}
-
-      - name: 🖼️ 补齐系统字体
+      - name: 🖼️ 补齐系统依赖
         run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
 
-      - name: 🚀 安装并启动服务
+      - name: 🚀 启动服务与执行脚本
         run: |
-          # 1. 严格顺序安装，彻底避免路径冲突报错
-          echo "📦 安装根目录依赖..."
-          pnpm install --frozen-lockfile
-          
-          echo "📦 安装 Next.js 依赖..."
-          cd rendie-nextjs && pnpm install --frozen-lockfile && cd ..
-          
-          echo "🌐 准备浏览器..."
+          npm i
+          cd rendie-nextjs
+          npm run dev &
+          cd ..
           npx puppeteer browsers install chrome
-          
-          # 2. 后台启动服务
-          echo "🚀 启动 Next.js..."
-          cd rendie-nextjs && pnpm run dev &
-          
-          # 3. 智能等待
-          echo "⏳ 等待 localhost:3000..."
-          npx wait-on http://localhost:3000 --timeout 120000
-          
-          # 4. 执行脚本
-          echo "🔥 开始运行 index.js"
-          cd .. && node index.js
+          node index.js
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
