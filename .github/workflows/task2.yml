@@ -22,16 +22,16 @@ jobs:
         with:
           node-version: 20
 
-      - name: 运行 粉丝-聊聊 脚本
-        run: |
-               mkdir -p error/
-               echo "Last Run: $(date)" > error/syn8888888888888888888888c-check.txt
-                
-      # 7. 部署到 main 分支 🚀
-      - name: Deploy to Main 🚀
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: 📂 拉取前端核心
+        uses: actions/checkout@v4
         with:
-          folder: error
-          branch: master
-          target-folder: error
-          commit-message: "data: 自动更新数据并保留源码 [skip ci]" # 👈 必须带 [skip ci] 防止死循环
+          repository: rendie-com/rendie-next.js
+          token: ${{ secrets.MY_PAT }}
+          path: rendie-next.js
+          ref: main
+
+      - name: 🚀 启动服务与执行脚本
+        run: |
+          npm i
+          cd rendie-next.js
+          npm run dev
