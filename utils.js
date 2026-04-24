@@ -14,21 +14,24 @@ export const getReadableTimestamp = () => {
 };
 
 export async function uploadToGithub(localPath, fileName) {
-  if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) return;
-  const cloudDir = TARGET_DIR || 'error';
+  if (!GITHUB_TOKEN || !GITHUB_OWNER || !GITHUB_REPO) {
+    console.error("❌ GitHub 上传变量缺失。");
+    return;
+  }
+  const cloudPath = `${TARGET_DIR || 'error'}/${fileName}`;
 
   try {
     const content = fs.readFileSync(localPath, { encoding: 'base64' });
     await octokit.repos.createOrUpdateFileContents({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
-      path: `${cloudDir}/${fileName}`,
-      message: `🚨 监控报错: ${fileName}`,
+      path: cloudPath,
+      message: `🚨 Error Log: ${fileName}`,
       content: content,
       branch: "main"
     });
-    console.log(`☁️  GitHub 云端同步成功: [${GITHUB_REPO} -> /${cloudDir}/${fileName}]`);
+    console.log(`☁️  GitHub 上传成功: [${GITHUB_REPO}] -> ${cloudPath}`);
   } catch (e) {
-    console.error(`⚠️  云端同步失败: ${e.message}`);
+    console.error(`❌ GitHub 上传失败: ${e.message}`);
   }
 }
