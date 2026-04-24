@@ -11,6 +11,9 @@ export const {
   NODE_USERNAME, NODE_TASK_URL, TARGET_DIR, GITHUB_ACTIONS 
 } = process.env;
 
+// 判断是否在 CI 环境
+const isCI = !!GITHUB_ACTIONS && GITHUB_ACTIONS !== 'false';
+
 export const CONFIG = {
   url: "http://localhost:3000/admin.html",
   extensionPath: path.resolve(process.cwd(), 'rendie.com'),
@@ -19,18 +22,17 @@ export const CONFIG = {
   checkIntervalMs: 100, 
 };
 
-// 使用 recursive: true 确保支持 error/task1 这种嵌套目录的创建
-if (!fs.existsSync(CONFIG.errorDir)) {
-  fs.mkdirSync(CONFIG.errorDir, { recursive: true });
-}
+if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
 
 async function triggerErrorCapture(page, typeName) {
+  if (!page || page.isClosed()) return;
   const stamp = getReadableTimestamp();
   const fileName = `${typeName}_${stamp}.png`;
   const imgPath = path.join(CONFIG.errorDir, fileName);
   try {
+    console.log(`\n📸 正在捕获截图: ${fileName}...`);
     await page.screenshot({ path: imgPath });
-    console.log(`\n📸 本地截图已保存: ${fileName}`);
+    console.log(`✅ 本地截图已保存。`);
     await uploadToGithub(imgPath, fileName);
   } catch (e) {
     console.error(`\n⚠️ 截图流程异常: ${e.message}`);
@@ -38,18 +40,14 @@ async function triggerErrorCapture(page, typeName) {
 }
 
 export const silentExit = async (browser) => {
-  process.stdout.write('\u001B[?25h'); 
+  if (!isCI) process.stdout.write('\u001B[?25h'); 
   if (browser && browser.connected) {
-    const originalStderr = process.stderr.write;
-    process.stderr.write = () => {}; 
     try { await browser.close(); } catch (e) {}
-    process.stderr.write = originalStderr;
   }
   process.exit(0);
 };
 
 export async function initApp() {
-  const isCI = !!GITHUB_ACTIONS && GITHUB_ACTIONS !== 'false';
   const browser = await puppeteer.launch({
     args: [
       '--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled',
@@ -66,7 +64,8 @@ export async function initApp() {
 export async function runMonitor(browser, page) {
   const startTime = Date.now();
   let step = 0, lastTitle = "载入中...";
-  process.stdout.write('\u001B[?25l'); 
+  
+  if (!isCI) process.stdout.write('\u001B[?25l'); 
 
   while (browser.connected) {
     const elapsed = Date.now() - startTime;
@@ -75,8 +74,19 @@ export async function runMonitor(browser, page) {
     
     try {
       if (step % 5 === 0) lastTitle = await page.title().catch(() => "读取中...");
-      process.stdout.write(`\r   > ${spinner[step % 10]} ${Math.floor(elapsed/1000)}秒 | ${lastTitle}\x1b[K`);
 
+      // --- 日志输出逻辑 ---
+      if (isCI) {
+        // CI 环境：每 10 秒（100 * 100ms）打印一行
+        if (step % 100 === 0) {
+          console.log(`[${Math.floor(elapsed/1000)}s] 状态: ${lastTitle}`);
+        }
+      } else {
+        // 本地环境：动态刷新
+        process.stdout.write(`\r   > ${spinner[step % 10]} ${Math.floor(elapsed/1000)}秒 | ${lastTitle}\x1b[K`);
+      }
+
+      // --- 逻辑判断 ---
       if (/错误|失败|Error/.test(lastTitle)) {
         await triggerErrorCapture(page, '业务错误');
         await silentExit(browser);
@@ -90,6 +100,7 @@ export async function runMonitor(browser, page) {
       }
 
       if (isTimeout) {
+        console.log(`\n⏰ 达到最大运行时间 (${MAX_RUNTIME_MINUTES}分钟)，触发超时截图...`);
         await triggerErrorCapture(page, '监控超时');
         await silentExit(browser);
         return;
