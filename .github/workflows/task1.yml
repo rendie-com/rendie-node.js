@@ -3,33 +3,26 @@ name: 1.shopee/粉丝-4小时
 on:
   workflow_dispatch: 
 
-env:  
+env:   
   TZ: Asia/Shanghai
-
-permissions:
-  contents: write
-  actions: write
+  # 将业务变量提升到全局，让 steps 保持整洁
+  NODE_USERNAME: "4hour"
+  NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
+  NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
+  NODE_EXPIRES_IN: "1777047860"
+  MAX_RUNTIME_MINUTES: 1
+  TARGET_DIR: "error/task1"
+  GITHUB_TOKEN: ${{ secrets.MY_PAT }}
+  GITHUB_OWNER: "rendie-com"
+  GITHUB_REPO: "rendie-node.js-error"
+  NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
 
 jobs:
   automation:
     runs-on: ubuntu-latest
     steps:
-      - name: ⚙️ 环境初始化
+      - name: ⚙️ 检出代码
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: 🛠️ 安装 pnpm (仅用于根目录脚本)
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: 📦 准备 Node 环境
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          # 仅对根目录 pnpm 开启缓存，npm 部分暂不开启以防路径混淆
-          cache: 'pnpm'
 
       - name: 📂 拉取前端核心
         uses: actions/checkout@v4
@@ -37,37 +30,46 @@ jobs:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
           path: rendie-nextjs
-          ref: main
 
-      - name: 🖼️ 补齐系统依赖
+      - name: 🟢 准备 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm' # 开启 npm 缓存，这比 pnpm 稳定且能提速
+
+      - name: 🖼️ 安装系统依赖
         run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
 
-      - name: 🚀 启动服务与执行脚本
+      - name: 🚀 安装与执行
         run: |
+          # 1. 安装前端并启动 (Next.js)
           cd rendie-nextjs
-          npm i          
-          npm run dev &
+          npm install
+          npm run dev & 
           
+          # 2. 回到根目录安装并执行主脚本
           cd ..
-          npm i 
+          npm install
+          
+          # 3. 等待服务启动 (防止 index.js 启动时 localhost:3000 还没好)
+          # 使用简易循环检查 3000 端口，比安装额外的包更轻量
+          echo "等待 Next.js 启动..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "Next.js 已就绪!"
+              break
+            fi
+            sleep 2
+          done
+
           node index.js
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
-          NODE_USERNAME: "4hour"
-          NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
-          NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
-          NODE_EXPIRES_IN: "1777047860"
-          NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
-          MAX_RUNTIME_MINUTES: 1
-          TARGET_DIR: "error/task1"
-          GITHUB_ACTIONS: "true"
-          GITHUB_TOKEN: ${{ secrets.MY_PAT }}
-          GITHUB_OWNER: "rendie-com"
-          GITHUB_REPO: "rendie-node.js-error"
 
-      - name: 🧹 清理流水线日志
+      - name: 🧹 清理
+        if: always()
         uses: Mattraks/delete-workflow-runs@v2
         with:
-          retain_days: 1
-          keep_minimum_runs: 0
+          retain_days: 0
+          keep_minimum_runs: 1
