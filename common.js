@@ -39,9 +39,32 @@ export async function initApp() {
   });
   console.log(`------------------------\n`);
   browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-blink-features=AutomationControlled', `--disable-extensions-except=${CONFIG.extensionPath}`, `--load-extension=${CONFIG.extensionPath}`, '--lang=zh-CN'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      // --- 内存管理优化 ---
+      '--disable-dev-shm-usage',      // 【重要】禁用内存共享，改用 /tmp 存储，防止内存溢出崩溃
+      '--disable-gpu',                // 禁用 GPU 硬件加速，节省大量系统资源
+      '--disable-software-rasterizer', // 禁用软件渲染器
+      // --- 性能与稳定性 ---
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',             // 【重要】在容器内使用单进程模式，大幅减少内存占用
+      '--disable-extensions-except=' + CONFIG.extensionPath,
+      '--load-extension=' + CONFIG.extensionPath,
+      // --- 界面与语言 ---
+      '--lang=zh-CN',                 // 强制中文环境
+      '--window-size=1920,1080',      // 设置窗口尺寸
+      '--disable-blink-features=AutomationControlled' // 隐藏 Puppeteer 特征
+    ],
+    // 根据环境自动切换无头模式 (CI 环境必须开启新版无头模式以支持插件)
     headless: isCI ? "new" : false,
-    defaultViewport: { width: 1920, height: 1080 },
+    defaultViewport: {
+      width: 1920,
+      height: 1080
+    },
+    // 忽略 HTTPS 报错（防止本地证书问题导致挂起）
+    ignoreHTTPSErrors: true,
   });
 
   page = await browser.newPage();
