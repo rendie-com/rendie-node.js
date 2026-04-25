@@ -1,37 +1,64 @@
-name: 用npm运行next.js
+name: 2.保持在线-置顶推广-5分钟
 
 on:
   workflow_dispatch: 
-
 permissions:
   contents: write
   actions: write
+env:   
+  TZ: Asia/Shanghai
+  NODE_USERNAME: "5minute"
+  NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_2 }}
+  NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_2 }}
+  NODE_EXPIRES_IN: "1777047860"
+  MAX_RUNTIME_MINUTES: 2
+  TARGET_DIR: "error/task2"
+  GITHUB_TOKEN: ${{ secrets.MY_PAT }}
+  GITHUB_OWNER: "rendie-com"
+  GITHUB_REPO: "rendie-node.js-error"
+  NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
 
 jobs:
-  deploy:
+  automation_job:
     runs-on: ubuntu-latest
     steps:
-      # 1. 检出当前仓库
-      - name: Checkout 🛎️
+      - name: 1. 下载当前仓库代码
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: 📂 拉取前端核心
+      - name: 2. 下载远程前端核心代码(rendie-nextjs)
         uses: actions/checkout@v4
         with:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
-          path: rendie-next.js
-          ref: main
+          path: rendie-nextjs
 
-      - name: 🚀 启动服务与执行脚本
+      - name: 3. 安装 Node.js 环境 (并开启 npm 缓存)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: 4. 安装中文字体
+        run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
+
+      - name: 5. 核心逻辑：安装、启动并运行
         run: |
-          cd rendie-next.js
-          npm i          
-          npm run dev
+          echo "正在安装前端依赖..."
+          cd rendie-nextjs
+          npm install
+          npm run dev & 
+
+          echo "正在安装主程序依赖..."
+          cd ..
+          npm install
+          node index.js
+        env:
+          NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
+          NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
+
+      - name: 6. 任务结束：清理多余的运行日志
+        if: always()
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          retain_days: 0
+          keep_minimum_runs: 1

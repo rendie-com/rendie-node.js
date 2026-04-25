@@ -20,19 +20,36 @@ export const CONFIG = {
 
 export async function initApp() {
   checkProjectEnv(env);
+
   browser = await puppeteer.launch({
     args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-blink-features=AutomationControlled', '--lang=zh-CN', `--disable-extensions-except=${CONFIG.extPath}`, `--load-extension=${CONFIG.extPath}`],
     headless: isCI ? "new" : false,
     defaultViewport: { width: 1920, height: 1080 },
     ignoreHTTPSErrors: true
   });
+
   page = await browser.newPage();
+
   await page.evaluateOnNewDocument((e) => {
     const conf = { 'access_token': e.NODE_ACCESS_TOKEN, 'refresh_token': e.NODE_REFRESH_TOKEN, 'username': e.NODE_USERNAME, 'expires_in': e.NODE_EXPIRES_IN || '604800', 'menuList': e.NODE_MENU_LIST || '[]', 'DEFAULT_DB': 'sqlite' };
     Object.entries(conf).forEach(([k, v]) => localStorage.setItem(k, v || ''));
   }, env);
-  console.log(`\n🔑 进入系统: ${CONFIG.url}`);
-  await page.goto(CONFIG.url, { waitUntil: 'networkidle2' });
+
+  console.log(`\n🔑 尝试进入系统: ${CONFIG.url}`);
+
+  // --- 优化后的 goto 逻辑 ---
+  try {
+    await page.goto(CONFIG.url, {
+      waitUntil: 'networkidle2',
+      timeout: 30000 // 30秒超时
+    });
+    console.log("✅ 页面加载成功");
+  } catch (e) {
+    console.log(`\n❌ 访问失败: 无法连接到 ${CONFIG.url}`);
+    console.log(`💡 请确保您的前端服务已启动 (npm run dev)`);
+    // 直接退出，不抛出长堆栈报错
+    await silentExit();
+  }
 }
 
 export async function runMonitor() {

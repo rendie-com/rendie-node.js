@@ -7,7 +7,6 @@ permissions:
   actions: write
 env:   
   TZ: Asia/Shanghai
-  # 业务参数统一放在这里，方便改动
   NODE_USERNAME: "4hour"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
   NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
@@ -39,34 +38,19 @@ jobs:
           node-version: 22
           cache: 'npm'
 
-      - name: 4. 安装中文字体与必要环境
+      - name: 4. 安装中文字体
         run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
 
       - name: 5. 核心逻辑：安装、启动并运行
         run: |
-          # A. 安装前端依赖并启动服务
           echo "正在安装前端依赖..."
           cd rendie-nextjs
           npm install
           npm run dev & 
-          
-          # B. 安装主程序依赖
+
           echo "正在安装主程序依赖..."
           cd ..
           npm install
-          
-          # C. 关键环节：检查服务是否启动成功
-          echo "正在检查 3000 端口是否就绪..."
-          for i in {1..30}; do
-            if curl -s http://localhost:3000 > /dev/null; then
-              echo "服务已成功启动，准备运行 index.js"
-              break
-            fi
-            echo "等待服务响应中..."
-            sleep 2
-          done
-
-          # D. 正式运行任务
           node index.js
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
