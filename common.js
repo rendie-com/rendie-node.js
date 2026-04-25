@@ -79,8 +79,17 @@ export async function runMonitor() {
         if (isError || isTimeout) {
           const type = isError ? 'ERROR' : 'TIMEOUT';
           const fileName = `${type}_${getReadableTimestamp()}.png`;
-          const imgPath = path.join(CONFIG.errorDir, fileName);
-          await page.screenshot({ path: imgPath }).catch(() => { });
+
+
+          const absoluteErrorDir = path.resolve(CONFIG.errorDir);
+          if (!fs.existsSync(absoluteErrorDir)) {
+            fs.mkdirSync(absoluteErrorDir, { recursive: true });
+          }
+          const imgPath = path.join(absoluteErrorDir, fileName);
+          console.log(`📸 正在保存截图至: ${imgPath}`);
+          await page.screenshot({ path: imgPath }).catch(e => console.error("保存失败:", e.message));
+
+
           await uploadToGithub(imgPath, fileName).catch(() => { });
           console.log(`🚨 任务异常结束: ${title}`);
         } else {

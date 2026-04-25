@@ -2,7 +2,9 @@ name: 1.shopee/粉丝-4小时
 
 on:
   workflow_dispatch: 
-
+permissions:
+  contents: write
+  actions: write
 env:   
   TZ: Asia/Shanghai
   # 业务参数统一放在这里，方便改动
