@@ -1,5 +1,6 @@
 # 敏感信息
 .env
+.npmrc
 
 # 依赖库
 node_modules/
@@ -12,6 +13,7 @@ error/
 .cache/
 .local-chromium/
 User Data/
+node_modules/
 
 # 系统与日志
 *.log

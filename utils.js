@@ -1,70 +1,38 @@
 import fs from 'fs';
-import { Octokit } from '@octokit/rest'; // 需要安装: pnpm add @octokit/rest
+import { Octokit } from '@octokit/rest';
 
-/**
- * 延迟函数
- * @param {number} ms 毫秒
- */
-export const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+export const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
-/**
- * 获取可读的时间戳用于文件名 (格式: 20260424_143005)
- */
+// 文件名：04月25日_11时30分
 export const getReadableTimestamp = () => {
   const now = new Date();
-  return now.toISOString()
-    .replace(/T/, '_')
-    .replace(/\..+/, '')
-    .replace(/[-:]/g, '');
+  const m = (now.getMonth() + 1).toString().padStart(2, '0');
+  const d = now.getDate().toString().padStart(2, '0');
+  const h = now.getHours().toString().padStart(2, '0');
+  const min = now.getMinutes().toString().padStart(2, '0');
+  return `${m}月${d}日_${h}时${min}分`;
 };
 
-/**
- * 将本地截图上传到指定的 GitHub 仓库
- * @param {string} localPath 本地文件路径
- * @param {string} fileName 要在 GitHub 上保存的文件名
- */
+// 计时显示：超过60秒显示分，否则秒
+export const formatElapsed = (ms) => {
+  const s = Math.floor(ms / 1000);
+  return s < 60 ? `${s}秒` : `${Math.floor(s / 60)}分${s % 60}秒`;
+};
+
 export async function uploadToGithub(localPath, fileName) {
-  const { 
-    GITHUB_TOKEN, 
-    GITHUB_OWNER, 
-    GITHUB_REPO, 
-    TARGET_DIR 
-  } = process.env;
+  const { GITHUB_TOKEN: auth, GITHUB_OWNER: owner, GITHUB_REPO: repo, TARGET_DIR: dir } = process.env;
+  if (!auth || auth.includes('***')) return;
 
-  // 如果没有配置 Token，则跳过上传（本地开发模式）
-  if (!GITHUB_TOKEN || GITHUB_TOKEN.startsWith('ghp_***')) {
-    console.log("ℹ️  未检测到有效的 GITHUB_TOKEN，跳过云端上传。");
-    return;
-  }
-
-  const octokit = new Octokit({ auth: GITHUB_TOKEN });
-
+  const octokit = new Octokit({ auth });
   try {
-    const content = fs.readFileSync(localPath, { encoding: 'base64' });
-    
-    // 构造在仓库中的存储路径 (例如: error/task1/SUCCESS_20260424.png)
-    const githubPath = `${TARGET_DIR || 'error'}/${fileName}`;
-
-    console.log(`🚀 正在上传至 GitHub: ${GITHUB_OWNER}/${GITHUB_REPO}/${githubPath}`);
-
     await octokit.repos.createOrUpdateFileContents({
-      owner: GITHUB_OWNER,
-      repo: GITHUB_REPO,
-      path: githubPath,
-      message: `📸 自动截屏提交: ${fileName}`,
-      content: content,
-      committer: {
-        name: 'Rendie-Bot',
-        email: 'bot@rendie.com'
-      },
-      author: {
-        name: 'Rendie-Bot',
-        email: 'bot@rendie.com'
-      }
+      owner, repo,
+      path: `${dir || 'error'}/${fileName}`,
+      message: `📸 异常截屏: ${fileName}`,
+      content: fs.readFileSync(localPath, 'base64'),
+      committer: { name: 'Rendie-Bot', email: 'bot@rendie.com' },
+      author: { name: 'Rendie-Bot', email: 'bot@rendie.com' }
     });
-
-    console.log(`✅ GitHub 上传成功！`);
-  } catch (error) {
-    console.error(`❌ GitHub 上传失败: ${error.message}`);
-  }
+    console.log(`✅ 已同步至 GitHub`);
+  } catch (e) { console.error(`❌ 上传失败: ${e.message}`); }
 }
