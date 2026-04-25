@@ -21,6 +21,23 @@ export const CONFIG = {
 if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
 
 export async function initApp() {
+  console.log(`\n--- 运行环境配置检查 ---`);
+  const sensitiveKeys = ['GITHUB_TOKEN', 'NODE_ACCESS_TOKEN', 'NODE_REFRESH_TOKEN'];
+
+  Object.entries(env).forEach(([key, value]) => {
+    // 仅打印我们关心的业务变量
+    if (key.startsWith('GITHUB_') || key.startsWith('NODE_') || key === 'TARGET_DIR') {
+      let displayValue = value;
+      if (sensitiveKeys.includes(key) && value) {
+        // 脱敏处理：保留首尾，中间打码
+        displayValue = value.length > 8
+          ? `${value.substring(0, 3)}****${value.substring(value.length - 3)}`
+          : '********';
+      }
+      console.log(`${key.padEnd(20)} : ${displayValue || '未设置'}`);
+    }
+  });
+  console.log(`------------------------\n`);
   browser = await puppeteer.launch({
     args: ['--no-sandbox', '--disable-blink-features=AutomationControlled', `--disable-extensions-except=${CONFIG.extensionPath}`, `--load-extension=${CONFIG.extensionPath}`, '--lang=zh-CN'],
     headless: isCI ? "new" : false,
@@ -28,7 +45,7 @@ export async function initApp() {
   });
 
   page = await browser.newPage();
-  
+
   // 预注入凭据，解决跳转导致的 destroyed 错误
   await page.evaluateOnNewDocument((e) => {
     const mapping = { 'access_token': e.NODE_ACCESS_TOKEN, 'refresh_token': e.NODE_REFRESH_TOKEN, 'username': e.NODE_USERNAME, 'expires_in': e.NODE_EXPIRES_IN || '604800', 'menuList': e.NODE_MENU_LIST || '[]', 'DEFAULT_DB': 'sqlite' };
@@ -63,8 +80,8 @@ export async function runMonitor() {
           const type = isError ? 'ERROR' : 'TIMEOUT';
           const fileName = `${type}_${getReadableTimestamp()}.png`;
           const imgPath = path.join(CONFIG.errorDir, fileName);
-          await page.screenshot({ path: imgPath }).catch(() => {});
-          await uploadToGithub(imgPath, fileName).catch(() => {});
+          await page.screenshot({ path: imgPath }).catch(() => { });
+          await uploadToGithub(imgPath, fileName).catch(() => { });
           console.log(`🚨 任务异常结束: ${title}`);
         } else {
           console.log(`✅ 任务圆满完成: ${title}`);
@@ -81,6 +98,6 @@ export async function runMonitor() {
 }
 
 export const silentExit = async () => {
-  if (browser?.connected) await browser.close().catch(() => {});
+  if (browser?.connected) await browser.close().catch(() => { });
   process.exit(0);
 };
