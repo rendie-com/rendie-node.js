@@ -5,7 +5,7 @@ on:
 
 env:   
   TZ: Asia/Shanghai
-  # 将业务变量提升到全局，让 steps 保持整洁
+  # 业务参数统一放在这里，方便改动
   NODE_USERNAME: "4hour"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
   NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
@@ -18,56 +18,59 @@ env:
   NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
 
 jobs:
-  automation:
+  automation_job:
     runs-on: ubuntu-latest
     steps:
-      - name: ⚙️ 检出代码
+      - name: 1. 下载当前仓库代码
         uses: actions/checkout@v4
 
-      - name: 📂 拉取前端核心
+      - name: 2. 下载远程前端核心代码(rendie-nextjs)
         uses: actions/checkout@v4
         with:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
           path: rendie-nextjs
 
-      - name: 🟢 准备 Node.js 环境
+      - name: 3. 安装 Node.js 环境 (并开启 npm 缓存)
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm' # 开启 npm 缓存，这比 pnpm 稳定且能提速
+          cache: 'npm'
 
-      - name: 🖼️ 安装系统依赖
+      - name: 4. 安装中文字体与必要环境
         run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
 
-      - name: 🚀 安装与执行
+      - name: 5. 核心逻辑：安装、启动并运行
         run: |
-          # 1. 安装前端并启动 (Next.js)
+          # A. 安装前端依赖并启动服务
+          echo "正在安装前端依赖..."
           cd rendie-nextjs
           npm install
           npm run dev & 
           
-          # 2. 回到根目录安装并执行主脚本
+          # B. 安装主程序依赖
+          echo "正在安装主程序依赖..."
           cd ..
           npm install
           
-          # 3. 等待服务启动 (防止 index.js 启动时 localhost:3000 还没好)
-          # 使用简易循环检查 3000 端口，比安装额外的包更轻量
-          echo "等待 Next.js 启动..."
+          # C. 关键环节：检查服务是否启动成功
+          echo "正在检查 3000 端口是否就绪..."
           for i in {1..30}; do
             if curl -s http://localhost:3000 > /dev/null; then
-              echo "Next.js 已就绪!"
+              echo "服务已成功启动，准备运行 index.js"
               break
             fi
+            echo "等待服务响应中..."
             sleep 2
           done
 
+          # D. 正式运行任务
           node index.js
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      - name: 🧹 清理
+      - name: 6. 任务结束：清理多余的运行日志
         if: always()
         uses: Mattraks/delete-workflow-runs@v2
         with:
