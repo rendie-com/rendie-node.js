@@ -49,20 +49,25 @@ export async function runMonitor() {
 
       if (step % 10 === 0) console.log(`[${formatElapsed(elapsed)}] 标题: ${title}`);
 
-      const isErr = /错误|失败|Error|Exception|404|500/.test(title);
+      // --- 最终精简判定 ---
+      const isErr = title.includes("出错");
       const isTimeOut = elapsed > CONFIG.maxTime;
+      const isSuccess = title.includes("已完成所有任务");
 
-      if (isErr || isTimeOut || /已完成所有任务|SUCCESS/.test(title)) {
+      if (isErr || isTimeOut || isSuccess) {
         if (isErr || isTimeOut) {
-          const name = `${isErr ? 'ERROR' : 'TIMEOUT'}_${getReadableTimestamp()}.png`;
+          const type = isErr ? 'ERROR' : 'TIMEOUT';
+          const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
+
           if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
           const imgPath = path.join(CONFIG.errorDir, name);
 
+          console.log(`📸 检测到状态异常 [${type}]，正在截图...`);
           await page.screenshot({ path: imgPath }).catch(() => { });
           await uploadToGithub(imgPath, name).catch(() => { });
-          console.log(`🚨 异常结束: ${title}`);
+          console.log(`🚨 任务终止: ${title}`);
         } else {
-          console.log(`✅ 任务完成: ${title}`);
+          console.log(`✅ 任务圆满完成: ${title}`);
         }
         await silentExit();
       }
