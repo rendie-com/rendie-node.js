@@ -36,3 +36,25 @@ export async function uploadToGithub(localPath, fileName) {
     console.log(`✅ 已同步至 GitHub`);
   } catch (e) { console.error(`❌ 上传失败: ${e.message}`); }
 }
+
+export function checkProjectEnv(env) {
+  console.log(`\n--- 🚀 Rendie 项目变量检查 ---`);
+  const keys = [
+    'NODE_USERNAME', 'NODE_ACCESS_TOKEN', 'NODE_REFRESH_TOKEN', 'NODE_EXPIRES_IN',
+    'NODE_MENU_LIST', 'MAX_RUNTIME_MINUTES', 'TARGET_DIR',
+    'GITHUB_TOKEN', 'GITHUB_OWNER', 'GITHUB_REPO'
+  ];
+
+  const sensitive = ['GITHUB_TOKEN', 'NODE_ACCESS_TOKEN', 'NODE_REFRESH_TOKEN'];
+
+  keys.forEach(key => {
+    const val = env[key] || process.env[key] || '未设置 ❌';
+    let display = val;
+
+    if (val !== '未设置 ❌' && sensitive.includes(key)) {
+      display = val.length > 8 ? `${val.slice(0, 3)}****${val.slice(-3)}` : '********';
+    }
+    console.log(`${key.padEnd(20)} : ${display}`);
+  });
+  console.log(`------------------------------\n`);
+}
