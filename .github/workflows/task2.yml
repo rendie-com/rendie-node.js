@@ -49,9 +49,8 @@ jobs:
         run: |
           echo "正在安装前端依赖..."
           cd rendie-nextjs
-          npm ci
-          npm run build
-          npm run start & 
+          npm ci         
+          npm run dev & 
 
           echo "正在安装主程序依赖..."
           cd ..
