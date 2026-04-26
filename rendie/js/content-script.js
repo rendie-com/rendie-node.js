@@ -4,7 +4,7 @@ let fun = {
         var This = this;
         window.addEventListener("message", function (e)//接收消息
         {
-            //console.log('【rendie.com/js/content-script.js】收到消息：', e.data);
+            //console.log('【rendie/js/content-script.js】收到消息：', e.data);
             if (e.data.cmd == 'content-script-rendie-com') {
                 chrome.runtime.sendMessage(e.data, function (r) {
                     if (chrome.runtime.lastError) {

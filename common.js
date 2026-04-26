@@ -13,7 +13,7 @@ let isShuttingDown = false;
 
 export const CONFIG = {
   url: "http://localhost:3000/admin.html",
-  extPath: path.resolve('rendie.com'),
+  extPath: path.resolve('rendie'),
   errorDir: path.resolve(env.TARGET_DIR || 'error'),
   maxTime: (Number.parseInt(env.MAX_RUNTIME_MINUTES, 10) || 1) * 60000,
   interval: 1000,

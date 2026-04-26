@@ -13,7 +13,7 @@ export const index =
         chrome.runtime.onMessage.addListener(function (request, sender, next) {
             if (request.cmd == 'content-script-rendie-com')//表是只接收【content-script】的信息。
             {
-                //console.log('【rendie.com/js/index.js】收到消息', request);
+                //console.log('【rendie/js/index.js】收到消息', request);
                 switch (request.id) {
                     case "load_screenshot": next(This.screenshot); break;
                     case "close_screenshot_window": This.c01(next); break;
