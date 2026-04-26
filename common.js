@@ -14,24 +14,52 @@ export const CONFIG = {
   url: "http://localhost:3000/admin.html",
   extPath: path.resolve('rendie.com'),
   errorDir: path.resolve(env.TARGET_DIR || 'error'),
-  maxTime: (parseInt(env.MAX_RUNTIME_MINUTES) || 1) * 60000,
+  maxTime: (Number.parseInt(env.MAX_RUNTIME_MINUTES, 10) || 1) * 60000,
   interval: 1000,
 };
 
-export async function initApp() {
-  checkProjectEnv(env);
+const GOTO_TIMEOUT_MS = 30_000;
+const TITLE_TIMEOUT_MS = 5_000;
+
+async function ensureBrowser() {
+  if (browser?.connected) return browser;
 
   browser = await puppeteer.launch({
     args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-blink-features=AutomationControlled', '--lang=zh-CN', `--disable-extensions-except=${CONFIG.extPath}`, `--load-extension=${CONFIG.extPath}`],
     headless: isCI ? "new" : false,
     defaultViewport: { width: 1920, height: 1080 },
-    ignoreHTTPSErrors: true
+    ignoreHTTPSErrors: true,
   });
 
+  browser.on('disconnected', () => {
+    // 保持静默：监控循环会自然退出
+  });
+
+  return browser;
+}
+
+async function ensurePage() {
+  if (page && !page.isClosed()) return page;
+  if (!browser?.connected) await ensureBrowser();
   page = await browser.newPage();
+  return page;
+}
+
+export async function initApp() {
+  checkProjectEnv(env);
+
+  await ensureBrowser();
+  await ensurePage();
 
   await page.evaluateOnNewDocument((e) => {
-    const conf = { 'access_token': e.NODE_ACCESS_TOKEN, 'refresh_token': e.NODE_REFRESH_TOKEN, 'username': e.NODE_USERNAME, 'expires_in': e.NODE_EXPIRES_IN || '604800', 'menuList': e.NODE_MENU_LIST || '[]', 'DEFAULT_DB': 'sqlite' };
+    const conf = {
+      access_token: e.NODE_ACCESS_TOKEN,
+      refresh_token: e.NODE_REFRESH_TOKEN,
+      username: e.NODE_USERNAME,
+      expires_in: e.NODE_EXPIRES_IN || '604800',
+      menuList: e.NODE_MENU_LIST || '[]',
+      DEFAULT_DB: 'sqlite',
+    };
     Object.entries(conf).forEach(([k, v]) => localStorage.setItem(k, v || ''));
   }, env);
 
@@ -41,7 +69,7 @@ export async function initApp() {
   try {
     await page.goto(CONFIG.url, {
       waitUntil: 'networkidle2',
-      timeout: 30000 // 30秒超时
+      timeout: GOTO_TIMEOUT_MS,
     });
     console.log("✅ 页面加载成功");
   } catch (e) {
@@ -61,7 +89,7 @@ export async function runMonitor() {
     try {
       const title = await Promise.race([
         page.title(),
-        new Promise((_, r) => setTimeout(() => r(new Error()), 5000))
+        new Promise((_, r) => setTimeout(() => r(new Error('title timeout')), TITLE_TIMEOUT_MS)),
       ]).catch(() => "页面挂起");
 
       if (step % 10 === 0) console.log(`[${formatElapsed(elapsed)}] 标题: ${title}`);
@@ -89,7 +117,7 @@ export async function runMonitor() {
         await silentExit();
       }
     } catch (e) {
-      if (e.message.includes('closed')) break;
+      if (String(e?.message || '').includes('closed')) break;
       await delay(2000);
     }
     step++;
@@ -98,6 +126,10 @@ export async function runMonitor() {
 }
 
 export const silentExit = async () => {
-  if (browser?.connected) await browser.close().catch(() => { });
-  process.exit(0);
+  try {
+    if (page && !page.isClosed()) await page.close().catch(() => { });
+  } finally {
+    if (browser?.connected) await browser.close().catch(() => { });
+    process.exit(0);
+  }
 };
