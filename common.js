@@ -2,13 +2,14 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import path from 'path';
 import fs from 'fs';
-import { delay, getReadableTimestamp, uploadToGithub, formatElapsed, checkProjectEnv } from './utils.js';
+import { delay, getReadableTimestamp, uploadToGithub, formatElapsed, checkProjectEnv, isBrowserConnected, registerProcessGuards } from './utils.js';
 
 puppeteer.use(StealthPlugin());
 
 let browser, page;
 const env = process.env;
 const isCI = env.GITHUB_ACTIONS === 'true';
+let isShuttingDown = false;
 
 export const CONFIG = {
   url: "http://localhost:3000/admin.html",
@@ -22,7 +23,7 @@ const GOTO_TIMEOUT_MS = 30_000;
 const TITLE_TIMEOUT_MS = 5_000;
 
 async function ensureBrowser() {
-  if (browser?.connected) return browser;
+  if (isBrowserConnected(browser)) return browser;
 
   browser = await puppeteer.launch({
     args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-blink-features=AutomationControlled', '--lang=zh-CN', `--disable-extensions-except=${CONFIG.extPath}`, `--load-extension=${CONFIG.extPath}`],
@@ -40,7 +41,7 @@ async function ensureBrowser() {
 
 async function ensurePage() {
   if (page && !page.isClosed()) return page;
-  if (!browser?.connected) await ensureBrowser();
+  if (!isBrowserConnected(browser)) await ensureBrowser();
   page = await browser.newPage();
   return page;
 }
@@ -75,8 +76,8 @@ export async function initApp() {
   } catch (e) {
     console.log(`\n❌ 访问失败: 无法连接到 ${CONFIG.url}`);
     console.log(`💡 请确保您的前端服务已启动 (npm run dev)`);
-    // 直接退出，不抛出长堆栈报错
-    await silentExit();
+    await shutdown();
+    throw new Error(`无法连接到 ${CONFIG.url}`);
   }
 }
 
@@ -84,7 +85,7 @@ export async function runMonitor() {
   const start = Date.now();
   let step = 0;
 
-  while (browser?.connected) {
+  while (!isShuttingDown && isBrowserConnected(browser)) {
     const elapsed = Date.now() - start;
     try {
       const title = await Promise.race([
@@ -114,7 +115,8 @@ export async function runMonitor() {
         } else {
           console.log(`✅ 任务圆满完成: ${title}`);
         }
-        await silentExit();
+        await shutdown();
+        return;
       }
     } catch (e) {
       if (String(e?.message || '').includes('closed')) break;
@@ -125,11 +127,14 @@ export async function runMonitor() {
   }
 }
 
-export const silentExit = async () => {
+export async function shutdown() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
   try {
     if (page && !page.isClosed()) await page.close().catch(() => { });
   } finally {
-    if (browser?.connected) await browser.close().catch(() => { });
-    process.exit(0);
+    if (isBrowserConnected(browser)) await browser.close().catch(() => { });
   }
-};
+}
+
+registerProcessGuards({ shutdown });

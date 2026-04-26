@@ -1,8 +1,13 @@
 import { initApp, runMonitor } from './common.js';
 
 async function main() {
-  await initApp();
-  await runMonitor();
+  try {
+    await initApp();
+    await runMonitor();
+  } catch (err) {
+    console.error(err);
+    process.exitCode = 1;
+  }
 }
 
 main();

@@ -1,11 +1,11 @@
 name: 2.保持在线-置顶推广-5分钟
 
 on:
-   # 手动触发
+  # 手动触发
   workflow_dispatch:
   # 定时器
   schedule:
-   - cron: "*/5 * * * *"
+    - cron: "*/5 * * * *"
 permissions:
   contents: write
   actions: write
@@ -49,13 +49,13 @@ jobs:
         run: |
           echo "正在安装前端依赖..."
           cd rendie-nextjs
-          npm install
+          npm ci
           npm run dev & 
 
           echo "正在安装主程序依赖..."
           cd ..
-          npm install
-          node index.js
+          npm ci
+          npm run start
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
