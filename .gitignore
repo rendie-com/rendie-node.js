@@ -1,6 +1,5 @@
 # 敏感信息
 .env
-.npmrc
 
 # 依赖库
 node_modules/
