@@ -191,7 +191,7 @@ export const common_tabs = {
         a02: function (id, oo) {
             if (oo.fileArr) {
                 let This = this;
-                fetch(chrome.runtime.getURL("inject/jquery-3.7.1.min.js")).then(response => { return response.text(); }).then(str => {
+                fetch(chrome.runtime.getURL("inject/jquery-4.0.0.min.js")).then(response => { return response.text(); }).then(str => {
                     // 处理返回的数据
                     This.a03(str, id, oo)
                 })
