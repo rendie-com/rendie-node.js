@@ -2,7 +2,8 @@ name: 1.shopee/粉丝-4小时
 
 on:
   workflow_dispatch: 
-
+  schedule:
+    - cron: "0 */4 * * *"
 permissions:
   contents: write
   actions: write
