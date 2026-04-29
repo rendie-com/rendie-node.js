@@ -40,7 +40,7 @@ jobs:
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: .
+          path: sqlite3
 
       - name: 4. 安装 Node.js 环境
         uses: actions/setup-node@v6
@@ -53,6 +53,7 @@ jobs:
 
       - name: 5. 并行安装与启动
         run: |
+          mv ./sqlite3/sqlite3/* ./sqlite3/ 2>/dev/null || true
           # A. 后台安装中文字体
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
