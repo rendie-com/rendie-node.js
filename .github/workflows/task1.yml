@@ -32,37 +32,43 @@ jobs:
         with:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
-          path: rendie-nextjs
+          path: next.js
 
       - name: 3. 安装 Node.js 环境
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'npm'
+          cache-dependency-path: |
+            node.js/package-lock.json
+            next.js/package-lock.json
 
-      - name: 4. 并行安装：依赖 + 中文字体
+      - name: 4. 并行安装与启动
         run: |
-          # A. 后台静默安装中文字体 (不阻塞 npm 安装)
+          # A. 后台安装中文字体
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
           PID_APT=$!
 
-          # B. 同时安装主程序依赖
-          npm ci --prefer-offline --no-audit &
+          # B. 安装后端依赖
+          npm ci --prefix node.js --prefer-offline --no-audit &
           PID_MAIN=$!
           
-          # C. 同时安装 Next.js 目录依赖
-          cd rendie-nextjs
-          npm ci --prefer-offline --no-audit &
+          # C. 安装前端依赖
+          npm ci --prefix next.js --prefer-offline --no-audit &
           PID_NEXT=$!
           
-          # 等待三项任务全部完成
           wait $PID_APT $PID_MAIN $PID_NEXT
           
-          echo "字体与依赖全部就绪，准备启动..."
-          npm run dev & 
-          cd ..
-          npm run start
+          echo "✅ 所有环境与依赖已就绪"
+
+          # D. 启动前端服务 (后台运行)
+          npm run dev --prefix next.js & 
+          
+          sleep 10
+          
+          # E. 启动后端主程序 (切换进目录确保 .env 正确加载)
+          cd node.js && npm run start
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 

@@ -34,30 +34,40 @@ jobs:
         with:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
-          path: rendie-nextjs
+          path: next.js
 
       - name: 3. 安装 Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'npm'
+          # 更新缓存路径
+          cache-dependency-path: |
+            node.js/package-lock.json
+            next.js/package-lock.json
 
       - name: 4. 并行安装与启动 (极致加速)
         run: |
-          # 同时安装两个目录的依赖，不审计、优先离线，榨干带宽和 CPU
-          npm ci --prefer-offline --no-audit &
+          # A. 并行安装依赖
+          npm ci --prefix node.js --prefer-offline --no-audit &
           PID_MAIN=$!
           
-          cd rendie-nextjs
-          npm ci --prefer-offline --no-audit &
+          npm ci --prefix next.js --prefer-offline --no-audit &
           PID_NEXT=$!
           
+          # B. 等待安装任务完成
           wait $PID_MAIN $PID_NEXT
           
-          echo "依赖就绪，开始运行..."
-          npm run dev & 
-          cd ..
-          npm run start
+          echo "✅ 依赖就绪，开始运行..."
+          
+          # C. 启动前端 Next.js 服务 (使用 next.js 目录)
+          npm run dev --prefix next.js & 
+          
+          # D. 预留启动时间
+          sleep 10
+          
+          # E. 启动后端主程序
+          cd node.js && npm run start
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }}
