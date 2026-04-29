@@ -1,4 +1,4 @@
-name: 1.shopee/粉丝-4小时
+name: 1.Shopee>采集箱>粉丝 - Shopee>聊聊 - 4小时
 
 on:
   workflow_dispatch: 
