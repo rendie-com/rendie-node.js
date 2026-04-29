@@ -5,11 +5,6 @@ on:
   schedule:
     - cron: "*/5 * * * *"
 
-# 关键：防止每 5 分钟触发的任务在后台堆叠，确保同一时间只有一个实例在运行
-concurrency:
-  group: shopee-task-2
-  cancel-in-progress: true
-
 permissions:
   contents: write
   actions: write
@@ -46,26 +41,26 @@ jobs:
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: .
-
+          path: sqlite3
+        
       - name: 4. 安装 Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'npm'
-          # 修正缓存路径，确保 node-version 24 环境下依赖能被正确缓存
+          # 更新缓存路径
           cache-dependency-path: |
-            node.js/package.json
-            next.js/package.json
+            node.js/package-lock.json
+            next.js/package-lock.json
 
-      - name: 5. 并行安装与启动 (修复 npm ci 报错)
-        timeout-minutes: 4 # 强制 4 分钟超时，防止挂死
-        run: |
-          # A. 并行安装依赖 (改用 install 解决缺少 lockfile 导致的报错)
-          npm install --prefix node.js --prefer-offline --no-audit &
+      - name: 5. 并行安装与启动 (极致加速)
+        run: |       
+          mv ./sqlite3/sqlite3 ./sqlite3
+          # A. 并行安装依赖
+          npm ci --prefix node.js --prefer-offline --no-audit &
           PID_MAIN=$!
           
-          npm install --prefix next.js --prefer-offline --no-audit &
+          npm ci --prefix next.js --prefer-offline --no-audit &
           PID_NEXT=$!
           
           # B. 等待安装任务完成
@@ -73,11 +68,11 @@ jobs:
           
           echo "✅ 依赖就绪，开始运行..."
           
-          # C. 启动前端 Next.js 服务
+          # C. 启动前端 Next.js 服务 (使用 next.js 目录)
           npm run dev --prefix next.js & 
           
           # D. 预留启动时间
-          sleep 15
+          sleep 10
           
           # E. 启动后端主程序
           cd node.js && npm run start
