@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: "*/5 * * * *"
 
+# 解决并发冲突：如果上一个任务没跑完，直接取消它，保证只有一个实例在跑
+concurrency:
+  group: shopee-task-2
+  cancel-in-progress: true
+
 permissions:
   contents: write
   actions: write
@@ -20,61 +25,63 @@ env:
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
+  # 注意：环境变量中的 JSON 字符串建议保持单行，避免解析错误
   NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
 
 jobs:
   automation_job:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. 下载代码
+      - name: 1. 下载主程序代码
         uses: actions/checkout@v6
+        with:
+          path: main-app  # 指定路径，避免跟后面冲突
 
-      - name: 2. 下载核心代码
+      - name: 2. 下载核心逻辑 (Next.js)
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
-          path: next.js
+          path: next-app
 
-      - name: 3. 下载sqlite3数据库
+      - name: 3. 下载 SQLite 数据库
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: .
+          path: db-system
 
       - name: 4. 安装 Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'npm'
-          # 更新缓存路径
           cache-dependency-path: |
-            node.js/package-lock.json
-            next.js/package-lock.json
+            main-app/package-lock.json
+            next-app/package-lock.json
 
-      - name: 5. 并行安装与启动 (极致加速)
+      - name: 5. 启动服务
+        timeout-minutes: 4 # 强制超时，防止卡死消耗额度
         run: |
-          # A. 并行安装依赖
-          npm ci --prefix node.js --prefer-offline --no-audit &
+          # A. 并行安装依赖 (使用确定的路径)
+          npm ci --prefix main-app --prefer-offline --no-audit &
           PID_MAIN=$!
           
-          npm ci --prefix next.js --prefer-offline --no-audit &
+          npm ci --prefix next-app --prefer-offline --no-audit &
           PID_NEXT=$!
           
-          # B. 等待安装任务完成
           wait $PID_MAIN $PID_NEXT
           
-          echo "✅ 依赖就绪，开始运行..."
+          echo "✅ 依赖安装完成"
           
-          # C. 启动前端 Next.js 服务 (使用 next.js 目录)
-          npm run dev --prefix next.js & 
+          # B. 启动 Next.js 服务
+          cd next-app && npm run dev & 
           
-          # D. 预留启动时间
-          sleep 10
+          # 等待前端服务就绪
+          sleep 15
           
-          # E. 启动后端主程序
-          cd node.js && npm run start
+          # C. 运行主程序
+          cd ../main-app && npm run start
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }}
