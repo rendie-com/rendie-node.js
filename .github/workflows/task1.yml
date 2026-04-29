@@ -9,8 +9,6 @@ permissions:
 
 env:   
   TZ: Asia/Shanghai
-  # 保留这个强制变量，确保万无一失
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   NODE_USERNAME: "4hour"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
   NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
@@ -26,47 +24,52 @@ jobs:
   automation_job:
     runs-on: ubuntu-latest
     steps:
-      # --- 修改点 1: v4 升级到 v5 ---
-      - name: 1. 下载当前仓库代码
-        uses: actions/checkout@v5
+      - name: 1. 下载代码
+        uses: actions/checkout@v6
 
-      # --- 修改点 2: v4 升级到 v5 ---
-      - name: 2. 下载远程前端核心代码(rendie-nextjs)
-        uses: actions/checkout@v5
+      - name: 2. 下载核心代码(rendie-nextjs)
+        uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
           path: rendie-nextjs
 
-      # --- 修改点 3: v4 升级到 v5 ---
-      - name: 3. 安装 Node.js 环境 (并开启 npm 缓存)
-        uses: actions/setup-node@v5
+      - name: 3. 安装 Node.js 环境
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'npm'
 
-      - name: 4. 安装中文字体
-        run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
-
-      - name: 5. 核心逻辑：安装、启动并运行
+      - name: 4. 并行安装：依赖 + 中文字体
         run: |
-          echo "正在安装前端依赖..."
-          cd rendie-nextjs
-          npm ci
-          npm run dev & 
+          # A. 后台静默安装中文字体 (不阻塞 npm 安装)
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
+          PID_APT=$!
 
-          echo "正在安装主程序依赖..."
+          # B. 同时安装主程序依赖
+          npm ci --prefer-offline --no-audit &
+          PID_MAIN=$!
+          
+          # C. 同时安装 Next.js 目录依赖
+          cd rendie-nextjs
+          npm ci --prefer-offline --no-audit &
+          PID_NEXT=$!
+          
+          # 等待三项任务全部完成
+          wait $PID_APT $PID_MAIN $PID_NEXT
+          
+          echo "字体与依赖全部就绪，准备启动..."
+          npm run dev & 
           cd ..
-          npm ci
           npm run start
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      # --- 修改点 4: 日志清理插件建议也检查更新 (保持 v2 亦可，或尝试 v3) ---
-      - name: 6. 任务结束：清理多余的运行日志
+      - name: 5. 任务结束：清理历史日志
         if: always()
-        uses: Mattraks/delete-workflow-runs@v2
-        with:
-          retain_days: 0
-          keep_minimum_runs: 1
+        run: |
+          gh run list --status completed --limit 30 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
