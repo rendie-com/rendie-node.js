@@ -2,11 +2,16 @@ name: 1.shopee/粉丝-4小时
 
 on:
   workflow_dispatch: 
+
 permissions:
   contents: write
   actions: write
+
 env:   
   TZ: Asia/Shanghai
+  # --- 在这里添加下面这行，强制所有 Action 使用 Node 24 运行 ---
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # -------------------------------------------------------
   NODE_USERNAME: "4hour"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
   NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
@@ -35,6 +40,7 @@ jobs:
       - name: 3. 安装 Node.js 环境 (并开启 npm 缓存)
         uses: actions/setup-node@v4
         with:
+          # 你这里已经写了 24，这是非常棒的，保持不变即可
           node-version: 24
           cache: 'npm'
 
