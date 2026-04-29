@@ -36,6 +36,13 @@ jobs:
           token: ${{ secrets.MY_PAT }}
           path: next.js
 
+      - name: 3. 下载数把库
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-sqlite3-system
+          token: ${{ secrets.MY_PAT }}
+          path: sqlite3
+
       - name: 3. 安装 Node.js
         uses: actions/setup-node@v6
         with:
