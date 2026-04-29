@@ -36,14 +36,14 @@ jobs:
           token: ${{ secrets.MY_PAT }}
           path: next.js
 
-      - name: 3. 下载数把库
+      - name: 3. 下载sqlite3数据库
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: sqlite3
+          path: .
 
-      - name: 3. 安装 Node.js
+      - name: 4. 安装 Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -53,7 +53,7 @@ jobs:
             node.js/package-lock.json
             next.js/package-lock.json
 
-      - name: 4. 并行安装与启动 (极致加速)
+      - name: 5. 并行安装与启动 (极致加速)
         run: |
           # A. 并行安装依赖
           npm ci --prefix node.js --prefer-offline --no-audit &

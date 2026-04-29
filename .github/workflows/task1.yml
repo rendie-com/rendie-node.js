@@ -35,14 +35,14 @@ jobs:
           token: ${{ secrets.MY_PAT }}
           path: next.js
 
-      - name: 3. 下载数据库
+      - name: 3. 下载sqlite3数据库
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: sqlite3
+          path: .
 
-      - name: 3. 安装 Node.js 环境
+      - name: 4. 安装 Node.js 环境
         uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -51,7 +51,7 @@ jobs:
             node.js/package-lock.json
             next.js/package-lock.json
 
-      - name: 4. 并行安装与启动
+      - name: 5. 并行安装与启动
         run: |
           # A. 后台安装中文字体
           sudo apt-get update -qq
@@ -81,7 +81,7 @@ jobs:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      - name: 5. 任务结束：清理历史日志
+      - name: 6. 任务结束：清理历史日志
         if: always()
         run: |
           gh run list --status completed --limit 30 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {}
