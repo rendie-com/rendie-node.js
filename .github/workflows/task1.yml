@@ -35,7 +35,7 @@ jobs:
       - name: 3. 安装 Node.js 环境 (并开启 npm 缓存)
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: 'npm'
 
       - name: 4. 安装中文字体
