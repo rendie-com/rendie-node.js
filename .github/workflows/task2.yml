@@ -1,9 +1,7 @@
 name: 2.保持在线-置顶推广-5分钟
 
 on:
-  # 手动触发
   workflow_dispatch:
-  # 定时器：每5分钟运行一次
   schedule:
     - cron: "*/5 * * * *"
 
@@ -13,9 +11,6 @@ permissions:
 
 env:   
   TZ: Asia/Shanghai
-  # --- 保持该变量，确保所有 JavaScript Action 都在 Node 24 下运行 ---
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  # -------------------------------------------------------
   NODE_USERNAME: "5minute"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_2 }}
   NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_2 }}
@@ -31,38 +26,46 @@ jobs:
   automation_job:
     runs-on: ubuntu-latest
     steps:
-      # 升级至 v5 以原生适配 Node 24 环境
-      - name: 1. 下载当前仓库代码
-        uses: actions/checkout@v5
+      - name: 1. 下载代码
+        uses: actions/checkout@v6
 
-      - name: 2. 下载远程前端核心代码(rendie-nextjs)
-        uses: actions/checkout@v5
+      - name: 2. 下载核心代码
+        uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
           path: rendie-nextjs
 
-      - name: 3. 安装 Node.js 环境 (并开启 npm 缓存)
-        uses: actions/setup-node@v5
+      - name: 3. 安装 Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'npm'
 
-      # 建议开启：置顶推广通常涉及 Shopee 后台校验，若出错截图无字体会显示乱码
-      # - name: 4. 安装中文字体及依赖
-      #   run: sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev
-
-      - name: 5. 核心逻辑：安装、启动并运行
+      - name: 4. 并行安装与启动 (极致加速)
         run: |
-          echo "正在安装前端依赖..."
+          # 同时安装两个目录的依赖，不审计、优先离线，榨干带宽和 CPU
+          npm ci --prefer-offline --no-audit &
+          PID_MAIN=$!
+          
           cd rendie-nextjs
-          npm ci         
+          npm ci --prefer-offline --no-audit &
+          PID_NEXT=$!
+          
+          wait $PID_MAIN $PID_NEXT
+          
+          echo "依赖就绪，开始运行..."
           npm run dev & 
-
-          echo "正在安装主程序依赖..."
           cd ..
-          npm ci
           npm run start
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }}
+
+      - name: 5. 异步清理日志
+        if: always()
+        run: |
+          # 仅保留最近的小量记录，确保 gh 命令瞬间完成
+          gh run delete --repo ${{ github.repository }} --all --status completed --limit 30
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
