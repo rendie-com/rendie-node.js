@@ -66,6 +66,6 @@ jobs:
         if: always()
         run: |
           # 仅保留最近的小量记录，确保 gh 命令瞬间完成
-          gh run delete --repo ${{ github.repository }} --all --status completed --limit 30
+          gh run list --status completed --limit 30 --json databaseId  --jq '.[].databaseId' | xargs -I {} gh run delete {}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
