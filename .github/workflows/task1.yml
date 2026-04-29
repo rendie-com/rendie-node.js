@@ -9,9 +9,8 @@ permissions:
 
 env:   
   TZ: Asia/Shanghai
-  # --- 在这里添加下面这行，强制所有 Action 使用 Node 24 运行 ---
+  # 保留这个强制变量，确保万无一失
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  # -------------------------------------------------------
   NODE_USERNAME: "4hour"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
   NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
@@ -27,20 +26,22 @@ jobs:
   automation_job:
     runs-on: ubuntu-latest
     steps:
+      # --- 修改点 1: v4 升级到 v5 ---
       - name: 1. 下载当前仓库代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
+      # --- 修改点 2: v4 升级到 v5 ---
       - name: 2. 下载远程前端核心代码(rendie-nextjs)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
           path: rendie-nextjs
 
+      # --- 修改点 3: v4 升级到 v5 ---
       - name: 3. 安装 Node.js 环境 (并开启 npm 缓存)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          # 你这里已经写了 24，这是非常棒的，保持不变即可
           node-version: 24
           cache: 'npm'
 
@@ -62,6 +63,7 @@ jobs:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
+      # --- 修改点 4: 日志清理插件建议也检查更新 (保持 v2 亦可，或尝试 v3) ---
       - name: 6. 任务结束：清理多余的运行日志
         if: always()
         uses: Mattraks/delete-workflow-runs@v2
