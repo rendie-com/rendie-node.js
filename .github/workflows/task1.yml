@@ -24,32 +24,38 @@ env:
 jobs:
   automation_job:
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
-      - name: 1. 下载代码
+      - name: 1. 下载主程序代码
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
 
-      - name: 2. 下载核心代码(rendie-nextjs)
+      - name: 2. 下载核心前端代码
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
           path: next.js
+          fetch-depth: 1
 
-      - name: 3. 下载sqlite3数据库
+      - name: 3. 下载db01
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
           path: db01
+          fetch-depth: 1
 
-      - name: 3. 下载sqlite3数据库
+      - name: 4. 下载db02
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-shopee-crawler
           token: ${{ secrets.MY_PAT }}
           path: db02
+          fetch-depth: 1
 
-      - name: 4. 安装 Node.js 环境
+      - name: 5. 环境准备与缓存配置
         uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -58,43 +64,34 @@ jobs:
             node.js/package-lock.json
             next.js/package-lock.json
 
-      - name: 5. 并行安装与启动
+      - name: 6. 并行构建环境并启动
         run: |
-          # 合并数据库并清理临时目录
           [ -d "./db01" ] && cp -rn ./db01/* . && rm -rf db01
           [ -d "./db02" ] && cp -rn ./db02/* . && rm -rf db02
 
-          # A. 后台安装中文字体
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
           PID_APT=$!
 
-          # B. 安装后端依赖
-          npm ci --prefix node.js --prefer-offline --no-audit &
+          npm ci --prefix node.js --prefer-offline --no-audit --progress=false &
           PID_MAIN=$!
           
-          # C. 安装前端依赖
-          npm ci --prefix next.js --prefer-offline --no-audit &
+          npm ci --prefix next.js --prefer-offline --no-audit --progress=false &
           PID_NEXT=$!
           
           wait $PID_APT $PID_MAIN $PID_NEXT
           
-          echo "✅ 所有环境与依赖已就绪"
-
-          # D. 启动前端服务 (后台运行)
           npm run dev --prefix next.js & 
           
           sleep 10
           
-          # E. 启动后端主程序 (切换进目录确保 .env 正确加载)
           cd node.js && npm run start
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      - name: 6. 任务结束：清理历史日志
+      - name: 7. 任务清理：删除历史运行记录
         if: always()
         run: |
-          gh run list --status completed --limit 30 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {}
+          gh run list --status completed --limit 50 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
