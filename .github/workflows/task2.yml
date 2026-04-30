@@ -28,8 +28,6 @@ jobs:
     steps:
       - name: 1. 下载主程序代码 (下载到根目录)
         uses: actions/checkout@v6
-        with:
-          path: .
 
       - name: 2. 下载核心代码 (下载到 next.js 目录)
         uses: actions/checkout@v6
@@ -38,21 +36,21 @@ jobs:
           token: ${{ secrets.MY_PAT }}
           path: next.js
 
-      - name: 3. 下载 sqlite3 数据库 (直接覆盖合并到根目录)
-        uses: actions/checkout@v6
-        with:
-          repository: rendie-com/rendie-sqlite3-system
-          token: ${{ secrets.MY_PAT }}
-          path: .
-          clean: false 
+      # - name: 3. 下载 sqlite3 数据库 (直接覆盖合并到根目录)
+      #   uses: actions/checkout@v6
+      #   with:
+      #     repository: rendie-com/rendie-sqlite3-system
+      #     token: ${{ secrets.MY_PAT }}
+      #     path: .
+      #     clean: false 
 
-      - name: 3-2. 下载 Shopee 数据库 (直接覆盖合并到根目录)
-        uses: actions/checkout@v6
-        with:
-          repository: rendie-com/rendie-sqlite3-shopee-product
-          token: ${{ secrets.MY_PAT }}
-          path: .
-          clean: false 
+      # - name: 3-2. 下载 Shopee 数据库 (直接覆盖合并到根目录)
+      #   uses: actions/checkout@v6
+      #   with:
+      #     repository: rendie-com/rendie-sqlite3-shopee-product
+      #     token: ${{ secrets.MY_PAT }}
+      #     path: .
+      #     clean: false 
 
       - name: 查看当前目录结构
         run: ls -R
