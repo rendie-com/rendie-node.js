@@ -40,7 +40,14 @@ jobs:
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: sqlite3
+          path: db01
+
+      - name: 3. 下载sqlite3数据库
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-sqlite3-shopee-crawler
+          token: ${{ secrets.MY_PAT }}
+          path: db02
 
       - name: 4. 安装 Node.js 环境
         uses: actions/setup-node@v6
@@ -53,7 +60,10 @@ jobs:
 
       - name: 5. 并行安装与启动
         run: |
-          mv ./sqlite3/sqlite3/* ./sqlite3/ 2>/dev/null || true
+          # 合并数据库并清理临时目录
+          [ -d "./db01" ] && cp -rn ./db01/* . && rm -rf db01
+          [ -d "./db02" ] && cp -rn ./db02/* . && rm -rf db02
+
           # A. 后台安装中文字体
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
