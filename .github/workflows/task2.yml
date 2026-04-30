@@ -35,20 +35,23 @@ jobs:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
           path: next.js
+          clean: false  # 关键：设置为 false，这样它就不会删掉上一步下载的文件
 
       - name: 3. 下载sqlite3数据库
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: sqlite01
+          path: .
+          clean: false  # 关键：设置为 false，这样它就不会删掉上一步下载的文件
       
       - name: 3. 下载【sqlite3/shopee/商品/店铺商品】数据库
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-shopee-product
           token: ${{ secrets.MY_PAT }}
-          path: sqlite02
+          path: .
+          clean: false  # 关键：设置为 false，这样它就不会删掉上一步下载的文件
 
       - name: 4. 安装 Node.js
         uses: actions/setup-node@v6
