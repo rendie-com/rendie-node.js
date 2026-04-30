@@ -41,16 +41,14 @@ jobs:
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: .
-          clean: false # 关键：不清理目录，直接把文件塞进去
+          path: sqlite01
       
       - name: 3. 下载【sqlite3/shopee/商品/店铺商品】数据库
         uses: actions/checkout@v6
         with:
-          repository: rendie-com/rendie-sqlite3-shopee-product
+          repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: .
-          clean: false # 关键：不清理目录，直接把文件塞进去
+          path: sqlite02
 
       - name: 4. 安装 Node.js
         uses: actions/setup-node@v6
@@ -64,8 +62,9 @@ jobs:
 
       - name: 5. 并行安装与启动 (极致加速)
         run: |       
-        
-
+          mv ./sqlite01/sqlite3/* ./sqlite3/ 2>/dev/null || true
+          mv ./sqlite02/sqlite3/* ./sqlite3/ 2>/dev/null || true
+          
           # A. 并行安装依赖
           npm ci --prefix node.js --prefer-offline --no-audit &
           PID_MAIN=$!
