@@ -80,9 +80,13 @@ jobs:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }} 
 
-      - name: 7. 任务清理：删除历史运行记录
+      - name: 7. 任务清理：删除 3 天前的运行记录
         if: always()
         run: |
-          gh run list --status completed --limit 50 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
+          # 获取 3 天前的日期格式 (YYYY-MM-DD)
+          DEL_DATE=$(date -d '3 days ago' +%Y-%m-%d)
+          
+          # 删除所有在 3 天前创建的已完成记录
+          gh run list --status completed --created "<$DEL_DATE" --limit 100 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
