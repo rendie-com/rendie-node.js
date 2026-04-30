@@ -62,8 +62,8 @@ jobs:
 
       - name: 5. 并行安装与启动 (极致加速)
         run: |       
-          mv ./sqlite01/sqlite3/* ./sqlite3/ 
-          mv ./sqlite02/sqlite3/* ./sqlite3/ 
+          mv -n ./sqlite01/sqlite3/* ./sqlite3/ 2>/dev/null || true
+          mv -n ./sqlite02/sqlite3/* ./sqlite3/ 2>/dev/null || true
           
           # A. 并行安装依赖
           npm ci --prefix node.js --prefer-offline --no-audit &
