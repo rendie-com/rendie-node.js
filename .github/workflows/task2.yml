@@ -41,8 +41,9 @@ jobs:
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: sqlite3
-          
+          path: .
+          clean: false  # 关键：设置为 false，这样它就不会删掉上一步下载的文件
+
       - name: 查看当前目录结构
         run: ls
         
