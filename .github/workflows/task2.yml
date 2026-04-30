@@ -58,7 +58,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'npm'
+          # cache: 'npm'
           # 修正路径：确保 package-lock.json 在这些位置真实存在
           cache-dependency-path: |
             node.js/package-lock.json
