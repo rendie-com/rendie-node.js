@@ -39,20 +39,12 @@ jobs:
           path: next.js
           fetch-depth: 1
 
-      - name: 3. 下载db01
+      - name: 3. 下载system数据库
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
           path: db01
-          fetch-depth: 1
-
-      - name: 4. 下载db02
-        uses: actions/checkout@v6
-        with:
-          repository: rendie-com/rendie-sqlite3-shopee-crawler
-          token: ${{ secrets.MY_PAT }}
-          path: db02
           fetch-depth: 1
 
       - name: 5. 环境准备与缓存配置
@@ -67,7 +59,6 @@ jobs:
       - name: 6. 并行构建环境并启动
         run: |
           [ -d "./db01" ] && cp -rn ./db01/* . && rm -rf db01
-          [ -d "./db02" ] && cp -rn ./db02/* . && rm -rf db02
 
           sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
           PID_APT=$!
