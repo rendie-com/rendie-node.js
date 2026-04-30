@@ -53,6 +53,9 @@ jobs:
           path: .
           clean: false  # 关键：设置为 false，这样它就不会删掉上一步下载的文件
 
+      - name: 查看当前目录结构
+        run: ls -R
+
       - name: 4. 安装 Node.js
         uses: actions/setup-node@v6
         with:
