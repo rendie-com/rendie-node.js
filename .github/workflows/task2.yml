@@ -61,7 +61,7 @@ jobs:
           cache: 'npm'
           # 修正路径：确保 package-lock.json 在这些位置真实存在
           cache-dependency-path: |
-            package-lock.json
+            node.js/package-lock.json
             next.js/package-lock.json
 
       - name: 5. 并行安装与启动
