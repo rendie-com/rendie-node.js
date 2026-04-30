@@ -41,8 +41,7 @@ jobs:
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: .
-          clean: false  # 关键：设置为 false，这样它就不会删掉上一步下载的文件
+          path: db01         
 
       - name: 查看当前目录结构
         run: ls
@@ -59,7 +58,7 @@ jobs:
 
       - name: 5. 并行安装与启动 (极致加速)
         run: |       
-          mv ./sqlite3/sqlite3/* ./sqlite3/ 2>/dev/null || true
+          cp -rf ./db01/* .
           # A. 并行安装依赖
           npm ci --prefix node.js --prefer-offline --no-audit &
           PID_MAIN=$!
