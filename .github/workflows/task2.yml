@@ -41,7 +41,14 @@ jobs:
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: db01         
+          path: db01      
+
+      - name: 下载rendie-sqlite3-shopee-product数据库
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-sqlite3-shopee-product
+          token: ${{ secrets.MY_PAT }}
+          path: db02   
 
       - name: 查看当前目录结构
         run: ls
@@ -58,7 +65,8 @@ jobs:
 
       - name: 5. 并行安装与启动 (极致加速)
         run: |       
-          cp -rf ./db01/* .
+          cp -rn ./db01/* .
+          cp -rn ./db02/* .
           # A. 并行安装依赖
           npm ci --prefix node.js --prefer-offline --no-audit &
           PID_MAIN=$!
