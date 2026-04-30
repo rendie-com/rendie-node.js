@@ -54,6 +54,9 @@ jobs:
           path: .
           clean: false 
 
+      - name: 查看当前目录结构
+        run: ls -R
+
       - name: 4. 安装 Node.js
         uses: actions/setup-node@v6
         with:
