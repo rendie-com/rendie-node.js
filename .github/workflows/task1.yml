@@ -47,6 +47,14 @@ jobs:
           path: db01
           fetch-depth: 1
 
+      - name: 3. 下载crawler数据库
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-sqlite3-shopee-crawler
+          token: ${{ secrets.MY_PAT }}
+          path: db02
+          fetch-depth: 1
+
       - name: 5. 环境准备与缓存配置
         uses: actions/setup-node@v6
         with:
@@ -60,6 +68,7 @@ jobs:
         run: |
           # 处理数据库文件
           [ -d "./db01" ] && cp -rn ./db01/* . && rm -rf db01
+          [ -d "./db02" ] && cp -rn ./db02/* . && rm -rf db02
 
           # 1. 并行安装依赖和系统库
           sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
