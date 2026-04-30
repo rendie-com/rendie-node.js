@@ -26,53 +26,53 @@ jobs:
   automation_job:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. 下载代码
+      - name: 1. 下载主程序代码 (下载到根目录)
         uses: actions/checkout@v6
+        with:
+          path: .
 
-      - name: 2. 下载核心代码
+      - name: 2. 下载核心代码 (下载到 next.js 目录)
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
           path: next.js
-          clean: false  # 关键：设置为 false，这样它就不会删掉上一步下载的文件
 
-      - name: 3. 下载sqlite3数据库
+      - name: 3. 下载 sqlite3 数据库 (直接覆盖合并到根目录)
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
           path: .
-          clean: false  # 关键：设置为 false，这样它就不会删掉上一步下载的文件
-      
-      - name: 3. 下载【sqlite3/shopee/商品/店铺商品】数据库
+          clean: false 
+
+      - name: 3-2. 下载 Shopee 数据库 (直接覆盖合并到根目录)
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-shopee-product
           token: ${{ secrets.MY_PAT }}
           path: .
-          clean: false  # 关键：设置为 false，这样它就不会删掉上一步下载的文件
-
-      - name: 查看当前目录结构
-        run: ls -R
+          clean: false 
 
       - name: 4. 安装 Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'npm'
-          # 更新缓存路径
+          # 修正路径：确保 package-lock.json 在这些位置真实存在
           cache-dependency-path: |
-            node.js/package-lock.json
+            package-lock.json
             next.js/package-lock.json
 
-      - name: 5. 并行安装与启动 (极致加速)
-        run: |       
-          mv -n ./sqlite01/sqlite3/* ./sqlite3/ 2>/dev/null || true
-          mv -n ./sqlite02/sqlite3/* ./sqlite3/ 2>/dev/null || true
+      - name: 5. 并行安装与启动
+        run: | 
+          # 注意：因为使用了 clean: false 和 path: .
+          # 文件已经自动合并在 ./sqlite3/ 下了，不需要手动 mv
           
-          # A. 并行安装依赖
-          npm ci --prefix node.js --prefer-offline --no-audit &
+          echo "📦 正在并行安装依赖..."
+          
+          # A. 并行安装依赖 (根目录和 next.js 目录)
+          npm ci --prefer-offline --no-audit &
           PID_MAIN=$!
           
           npm ci --prefix next.js --prefer-offline --no-audit &
@@ -83,14 +83,14 @@ jobs:
           
           echo "✅ 依赖就绪，开始运行..."
           
-          # C. 启动前端 Next.js 服务 (使用 next.js 目录)
+          # C. 启动前端 Next.js 服务
           npm run dev --prefix next.js & 
           
           # D. 预留启动时间
           sleep 10
           
-          # E. 启动后端主程序
-          cd node.js && npm run start
+          # E. 启动后端主程序 (就在当前根目录)
+          npm run start
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }}
