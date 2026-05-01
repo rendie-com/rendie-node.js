@@ -24,7 +24,7 @@ env:
 jobs:
   automation_job:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     steps:
       - name: 1. 下载主程序代码
         uses: actions/checkout@v6
