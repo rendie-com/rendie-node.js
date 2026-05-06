@@ -88,22 +88,37 @@ export async function runMonitor() {
   while (!isShuttingDown && browser?.connected) {
     const elapsed = Date.now() - start;
 
-    // 1. 同时尝试获取标题和 URL
-    // page.url() 通常比 page.title() 更稳定，不容易因框架脱离而报错
-    const currentUrl = page.url(); 
+    // 1. 获取主页面 URL 和 标题
+    const currentUrl = page.url();
     const title = await page.title().catch((err) => {
-      if (err.message.includes('detached')) return "跳转中/框架重构";
-      return "获取标题失败";
+      if (err.message.includes('detached')) return "框架脱离/跳转中";
+      return "标题获取失败";
     });
 
-    // 2. 每 10 秒打印一次详细状态
+    // 2. 获取所有 iframe 的地址
+    // filter(f => f !== page.mainFrame()) 排除主框架，只留真正的 iframe
+    const frames = page.frames();
+    const iframeUrls = frames
+      .filter(f => f !== page.mainFrame())
+      .map(f => f.url())
+      .filter(url => url !== 'about:blank'); // 过滤掉空白 iframe
+
+    // 3. 每 10 秒打印详细报告
     if (step % 10 === 0) {
-      console.log(`[${formatElapsed(elapsed)}]`);
-      console.log(`   🔗 地址: ${currentUrl}`);
-      console.log(`   🏷️ 标题: ${title}`);
+      console.log(`--- [${formatElapsed(elapsed)}] 状态报告 ---`);
+      console.log(`📍 主地址: ${currentUrl}`);
+      console.log(`🏷️  主标题: ${title}`);
+      
+      if (iframeUrls.length > 0) {
+        console.log(`🖼️  检测到 ${iframeUrls.length} 个 iframe:`);
+        iframeUrls.forEach((url, i) => console.log(`   └─ [${i+1}] ${url}`));
+      } else {
+        console.log(`🖼️  暂无活动 iframe`);
+      }
+      console.log(`------------------------------`);
     }
 
-    // 3. 判定逻辑
+    // 4. 判定逻辑
     const isErr = title.includes("出错");
     const isSuccess = title.includes("已完成所有任务");
     const isTimeOut = elapsed > CONFIG.maxTime;
@@ -112,18 +127,15 @@ export async function runMonitor() {
       const type = isErr ? 'ERROR' : (isTimeOut ? 'TIMEOUT' : 'SUCCESS');
       
       if (isErr || isTimeOut) {
+        console.log(`🚨 任务终止 [${type}]: ${title}`);
         const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
         const imgPath = path.join(CONFIG.errorDir, name);
-
-        console.log(`🚨 异常终止 [${type}]`);
-        console.log(`   最后停留地址: ${currentUrl}`);
-        console.log(`   最后显示标题: ${title}`);
 
         if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
         await page.screenshot({ path: imgPath }).catch(() => {});
         await uploadToGithub(imgPath, name).catch(() => {});
       } else {
-        console.log(`✅ 任务圆满完成`);
+        console.log(`✅ 任务顺利完成`);
       }
 
       await shutdown();
