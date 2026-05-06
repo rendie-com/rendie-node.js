@@ -88,47 +88,42 @@ export async function runMonitor() {
   while (!isShuttingDown && browser?.connected) {
     const elapsed = Date.now() - start;
 
-    // 1. 获取标题：捕捉 Detached Frame 或 Timeout 错误并转化为字符串
-    const title = await Promise.race([
-      page.title(),
-      new Promise((_, r) => setTimeout(() => r(new Error('标题获取超时')), 5000))
-    ]).catch((err) => {
-      // 如果是框架脱离，返回具体的错误提示，否则返回通用错误
-      return err.message.includes('detached') ? "页面正在跳转/框架脱离" : err.message;
+    // 1. 同时尝试获取标题和 URL
+    // page.url() 通常比 page.title() 更稳定，不容易因框架脱离而报错
+    const currentUrl = page.url(); 
+    const title = await page.title().catch((err) => {
+      if (err.message.includes('detached')) return "跳转中/框架重构";
+      return "获取标题失败";
     });
 
+    // 2. 每 10 秒打印一次详细状态
     if (step % 10 === 0) {
-      console.log(`[${formatElapsed(elapsed)}] 标题状态: ${title}`);
+      console.log(`[${formatElapsed(elapsed)}]`);
+      console.log(`   🔗 地址: ${currentUrl}`);
+      console.log(`   🏷️ 标题: ${title}`);
     }
 
-    // 2. 判定逻辑
+    // 3. 判定逻辑
     const isErr = title.includes("出错");
     const isSuccess = title.includes("已完成所有任务");
     const isTimeOut = elapsed > CONFIG.maxTime;
-    
-    // 只有在标题包含明确错误或超时时才视为异常，
-    // "框架脱离" 这种中间状态我们通常选择“忽略并继续”，等待下一轮循环重试
-    const isHung = title === "标题获取超时"; 
 
-    if (isErr || isTimeOut || isSuccess || isHung) {
-      let reason = "";
-      if (isErr) reason = `页面报错: ${title}`;
-      else if (isTimeOut) reason = `达到最大运行时间 (${CONFIG.maxTime / 60000}分钟)`;
-      else if (isHung) reason = `页面无响应 (原因: ${title})`;
-      else if (isSuccess) reason = `任务顺利完成`;
-
-      if (isErr || isTimeOut || isHung) {
-        const type = isTimeOut ? 'TIMEOUT' : 'ERROR';
+    if (isErr || isTimeOut || isSuccess) {
+      const type = isErr ? 'ERROR' : (isTimeOut ? 'TIMEOUT' : 'SUCCESS');
+      
+      if (isErr || isTimeOut) {
         const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
-        
-        if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
         const imgPath = path.join(CONFIG.errorDir, name);
 
-        console.log(`📸 异常终止: ${reason}`);
-        await page.screenshot({ path: imgPath }).catch(() => { });
-        await uploadToGithub(imgPath, name).catch(() => { });
+        console.log(`🚨 异常终止 [${type}]`);
+        console.log(`   最后停留地址: ${currentUrl}`);
+        console.log(`   最后显示标题: ${title}`);
+
+        if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
+        await page.screenshot({ path: imgPath }).catch(() => {});
+        await uploadToGithub(imgPath, name).catch(() => {});
       } else {
-        console.log(`✅ ${reason}`);
+        console.log(`✅ 任务圆满完成`);
       }
 
       await shutdown();
