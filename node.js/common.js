@@ -12,7 +12,7 @@ const isCI = env.GITHUB_ACTIONS === 'true';
 let isShuttingDown = false;
 
 export const CONFIG = {
-  url: "https://www.rendie.com/admin",
+  url: "http://localhost:3000/admin",
   extPath: path.resolve('../chrome-extension'),
   errorDir: path.resolve(env.TARGET_DIR || 'error'),
   maxTime: (Number.parseInt(env.MAX_RUNTIME_MINUTES, 10) || 1) * 60000,
