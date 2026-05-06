@@ -88,10 +88,7 @@ export async function runMonitor() {
   while (!isShuttingDown && isBrowserConnected(browser)) {
     const elapsed = Date.now() - start;
     try {
-      const title = await Promise.race([
-        page.title(),
-        new Promise((_, r) => setTimeout(() => r(new Error('title timeout')), TITLE_TIMEOUT_MS)),
-      ]).catch(() => "页面挂起");
+      const title = await page.title().catch(() => "");
 
       if (step % 10 === 0) console.log(`[${formatElapsed(elapsed)}] 标题: ${title}`);
 
