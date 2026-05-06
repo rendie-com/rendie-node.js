@@ -85,40 +85,52 @@ export async function runMonitor() {
   const start = Date.now();
   let step = 0;
 
-  while (!isShuttingDown && isBrowserConnected(browser)) {
+  while (!isShuttingDown && browser?.connected) {
     const elapsed = Date.now() - start;
-    try {
-      const title = await page.title().catch(() => "");
 
-      if (step % 10 === 0) console.log(`[${formatElapsed(elapsed)}] 标题: ${title}`);
+    // 1. 获取标题：如果 5 秒没反应，就显示“标题获取超时”
+    const title = await Promise.race([
+      page.title(),
+      new Promise((_, r) => setTimeout(() => r(new Error('标题获取超时')), 5000))
+    ]).catch((err) => err.message); // 捕捉错误并将其作为标题内容显示
 
-      // --- 最终精简判定 ---
-      const isErr = title.includes("出错");
-      const isTimeOut = elapsed > CONFIG.maxTime;
-      const isSuccess = title.includes("已完成所有任务");
-
-      if (isErr || isTimeOut || isSuccess) {
-        if (isErr || isTimeOut) {
-          const type = isErr ? 'ERROR' : 'TIMEOUT';
-          const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
-
-          if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
-          const imgPath = path.join(CONFIG.errorDir, name);
-
-          console.log(`📸 检测到状态异常 [${type}]，正在截图...`);
-          await page.screenshot({ path: imgPath }).catch(() => { });
-          await uploadToGithub(imgPath, name).catch(() => { });
-          console.log(`🚨 任务终止: ${title}`);
-        } else {
-          console.log(`✅ 任务圆满完成: ${title}`);
-        }
-        await shutdown();
-        return;
-      }
-    } catch (e) {
-      if (String(e?.message || '').includes('closed')) break;
-      await delay(2000);
+    if (step % 10 === 0) {
+      console.log(`[${formatElapsed(elapsed)}] 标题状态: ${title}`);
     }
+
+    // 2. 判定原因
+    const isErr = title.includes("出错");
+    const isHung = title === "标题获取超时"; // 显式判断挂起原因
+    const isTimeOut = elapsed > CONFIG.maxTime;
+    const isSuccess = title.includes("已完成所有任务");
+
+    if (isErr || isHung || isTimeOut || isSuccess) {
+      // 确定终止的类型标签
+      const type = (isErr || isHung) ? 'ERROR' : (isTimeOut ? 'TIMEOUT' : 'SUCCESS');
+
+      // 确定具体显示的原因描述
+      let reason = "";
+      if (isErr) reason = `页面显示: ${title}`;
+      else if (isHung) reason = `由于“${title}”导致页面挂起`;
+      else if (isTimeOut) reason = `运行时间超过 ${CONFIG.maxTime / 60000} 分钟`;
+      else if (isSuccess) reason = `任务顺利完成`;
+
+      if (isErr || isHung || isTimeOut) {
+        const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
+        if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
+        const imgPath = path.join(CONFIG.errorDir, name);
+
+        console.log(`📸 异常终止 [${type}]: ${reason}`);
+        await page.screenshot({ path: imgPath }).catch(() => { });
+        await uploadToGithub(imgPath, name).catch(() => { });
+      } else {
+        console.log(`✅ ${reason}`);
+      }
+
+      await shutdown();
+      return;
+    }
+
     step++;
     await delay(CONFIG.interval);
   }
