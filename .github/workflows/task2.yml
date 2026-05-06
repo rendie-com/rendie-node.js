@@ -20,79 +20,34 @@ env:
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
-  NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"http://localhost:3000/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
+  NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"https://www.rendie.com/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
 
 jobs:
   automation_job:
     runs-on: ubuntu-latest
-    timeout-minutes: 5  # 增加超时保护，防止流程无限挂起
+    timeout-minutes: 5
     steps:
-      - name: 1. 下载主程序代码
-        uses: actions/checkout@v6
+      - name: 1. 检出代码
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # 极致加速：只下载最新一层
-
-      - name: 2. 下载核心前端代码
-        uses: actions/checkout@v6
-        with:
-          repository: rendie-com/rendie-next.js
-          token: ${{ secrets.MY_PAT }}
-          path: next.js
           fetch-depth: 1
 
-      - name: 3. 下载系统数据库
-        uses: actions/checkout@v6
+      - name: 2. 环境准备
+        uses: actions/setup-node@v4
         with:
-          repository: rendie-com/rendie-sqlite3-system
-          token: ${{ secrets.MY_PAT }}
-          path: db01
-          fetch-depth: 1
-
-      - name: 4. 下载商品数据库
-        uses: actions/checkout@v6
-        with:
-          repository: rendie-com/rendie-sqlite3-shopee-product
-          token: ${{ secrets.MY_PAT }}
-          path: db02
-          fetch-depth: 1
-
-      - name: 5. 环境准备与缓存配置
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
+          node-version: 22
           cache: 'npm'
-          cache-dependency-path: |
-            node.js/package-lock.json
-            next.js/package-lock.json
+          cache-dependency-path: 'node.js/package-lock.json'
 
-      - name: 6. 合并数据并并行启动
-        run: |       
-          # 合并数据库并清理临时目录
-          [ -d "./db01" ] && cp -rn ./db01/* . && rm -rf db01
-          [ -d "./db02" ] && cp -rn ./db02/* . && rm -rf db02
-
-          # 1. 并行安装依赖和系统库
-          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
+      - name: 3. 安装依赖 (并行)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libgbm-dev fonts-wqy-zenhei -qq &
           PID_APT=$!
+          cd node.js && npm ci --prefer-offline --no-audit --no-fund &
+          PID_NPM=$!
+          wait $PID_APT $PID_NPM
 
-          # 并行安装依赖 (使用 --prefer-offline 进一步提速)
-          npm ci --prefix node.js --prefer-offline --no-audit &
-          PID_MAIN=$!
-          
-          npm ci --prefix next.js --prefer-offline --no-audit &
-          PID_NEXT=$!
-          
-          # 等待依赖安装完成
-          wait $PID_MAIN $PID_NEXT
-          
-          echo "✅ 依赖就绪，启动前端服务..."
-          npm run dev --prefix next.js & 
-          
-          # 预留前端启动时间
-          sleep 10
-          
-          echo "🚀 启动后端主程序..."
-          cd node.js && npm run start
-        env:
-          NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
-          NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }}
+      - name: 4. 运行主程序
+        run: |
+          cd node.js
+          npm run start
