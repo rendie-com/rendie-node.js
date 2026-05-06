@@ -12,7 +12,8 @@ const isCI = env.GITHUB_ACTIONS === 'true';
 let isShuttingDown = false;
 
 export const CONFIG = {
-  url: "https://www.rendie.com/admin",
+  // 🚩 优先从 yml 的环境变量 TARGET_URL 读取
+  url: env.TARGET_URL || "https://www.rendie.com/admin",
   extPath: path.resolve('../chrome-extension'),
   errorDir: path.resolve(env.TARGET_DIR || 'error'),
   maxTime: (Number.parseInt(env.MAX_RUNTIME_MINUTES, 10) || 1) * 60000,
@@ -40,9 +41,6 @@ async function ensurePage() {
   
   page = await browser.newPage();
 
-  // --- 🚩 异常检测监听器：实时排查跳转/挂起原因 ---
-  
-  // 1. 监听请求失败（网络层：如连不上后端、DNS 错误）
   page.on('requestfailed', request => {
     const url = request.url();
     const type = request.resourceType();
@@ -51,7 +49,6 @@ async function ensurePage() {
     }
   });
 
-  // 2. 监听 HTTP 状态异常（业务层：如 404, 500）
   page.on('response', response => {
     const status = response.status();
     if (status >= 400) {
@@ -59,7 +56,6 @@ async function ensurePage() {
     }
   });
 
-  // 3. 监听浏览器内部 JS 运行时错误（崩溃层：如变量未定义导致的白屏）
   page.on('pageerror', err => {
     console.log(`💀 浏览器脚本崩溃: ${err.message}`);
   });
@@ -69,7 +65,6 @@ async function ensurePage() {
 
 export async function initApp() {
   checkProjectEnv(env);
-
   await ensureBrowser();
   await ensurePage();
 
@@ -94,7 +89,6 @@ export async function initApp() {
     console.log("✅ 页面加载成功");
   } catch (e) {
     console.log(`\n❌ 访问失败: 无法连接到 ${CONFIG.url} (原因: ${e.message})`);
-    console.log(`💡 提示: 请确保前端服务已启动，且端口与 CONFIG.url 一致`);
     await shutdown();
     throw new Error(`无法连接到 ${CONFIG.url}`);
   }
@@ -107,34 +101,15 @@ export async function runMonitor() {
   while (!isShuttingDown && isBrowserConnected(browser)) {
     const elapsed = Date.now() - start;
 
-    // 1. 获取主页面 URL 和 标题
-    const currentUrl = page.url();
-    const title = await page.title().catch((err) => {
-      if (err.message.includes('detached')) return "框架脱离/跳转中";
-      return "标题获取失败";
-    });
+    // 1. 最简单的获取：拿不到就给空字符串
+    const title = await page.title().catch(() => "");
 
-    // 2. 获取 iframe 详情
-    const frames = page.frames();
-    const iframeUrls = frames
-      .filter(f => f !== page.mainFrame())
-      .map(f => f.url())
-      .filter(url => url !== 'about:blank');
-
-    // 3. 定时报告
+    // 2. 每 10 秒输出一次标题状态
     if (step % 10 === 0) {
-      console.log(`--- [${formatElapsed(elapsed)}] 状态报告 ---`);
-      console.log(`📍 主地址: ${currentUrl}`);
-      console.log(`🏷️  主标题: ${title}`);
-      
-      if (iframeUrls.length > 0) {
-        console.log(`🖼️  检测到 ${iframeUrls.length} 个 iframe:`);
-        iframeUrls.forEach((url, i) => console.log(`   └─ [${i+1}] ${url}`));
-      }
-      console.log(`------------------------------`);
+      console.log(`[${formatElapsed(elapsed)}] 标题: ${title || "---"}`);
     }
 
-    // 4. 判定逻辑
+    // 3. 核心判断逻辑
     const isErr = title.includes("出错");
     const isSuccess = title.includes("已完成所有任务");
     const isTimeOut = elapsed > CONFIG.maxTime;
@@ -142,8 +117,9 @@ export async function runMonitor() {
     if (isErr || isTimeOut || isSuccess) {
       const type = isErr ? 'ERROR' : (isTimeOut ? 'TIMEOUT' : 'SUCCESS');
       
-      if (isErr || isTimeOut) {
-        console.log(`🚨 任务终止 [${type}]: ${title}`);
+      if (type !== 'SUCCESS') {
+        console.log(`🚨 终止 [${type}]: ${title}`);
+        
         const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
         const imgPath = path.join(CONFIG.errorDir, name);
 
@@ -151,7 +127,7 @@ export async function runMonitor() {
         await page.screenshot({ path: imgPath }).catch(() => {});
         await uploadToGithub(imgPath, name).catch(() => {});
       } else {
-        console.log(`✅ 任务顺利完成`);
+        console.log(`✅ ${title}`);
       }
 
       await shutdown();
