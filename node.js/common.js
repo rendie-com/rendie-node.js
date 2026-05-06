@@ -135,7 +135,7 @@ export async function runMonitor() {
     }
 
     // 4. 判定逻辑
-    const isErr = title.includes("出错");
+    const isErr = title.includes("1出错");
     const isSuccess = title.includes("已完成所有任务");
     const isTimeOut = elapsed > CONFIG.maxTime;
 
