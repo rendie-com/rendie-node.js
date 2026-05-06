@@ -88,39 +88,43 @@ export async function runMonitor() {
   while (!isShuttingDown && browser?.connected) {
     const elapsed = Date.now() - start;
 
-    // 1. 获取标题：如果 5 秒没反应，就显示“标题获取超时”
+    // 1. 获取标题：捕捉 Detached Frame 或 Timeout 错误并转化为字符串
     const title = await Promise.race([
       page.title(),
       new Promise((_, r) => setTimeout(() => r(new Error('标题获取超时')), 5000))
-    ]).catch((err) => err.message); // 捕捉错误并将其作为标题内容显示
+    ]).catch((err) => {
+      // 如果是框架脱离，返回具体的错误提示，否则返回通用错误
+      return err.message.includes('detached') ? "页面正在跳转/框架脱离" : err.message;
+    });
 
     if (step % 10 === 0) {
       console.log(`[${formatElapsed(elapsed)}] 标题状态: ${title}`);
     }
 
-    // 2. 判定原因
+    // 2. 判定逻辑
     const isErr = title.includes("出错");
-    const isHung = title === "标题获取超时"; // 显式判断挂起原因
-    const isTimeOut = elapsed > CONFIG.maxTime;
     const isSuccess = title.includes("已完成所有任务");
+    const isTimeOut = elapsed > CONFIG.maxTime;
+    
+    // 只有在标题包含明确错误或超时时才视为异常，
+    // "框架脱离" 这种中间状态我们通常选择“忽略并继续”，等待下一轮循环重试
+    const isHung = title === "标题获取超时"; 
 
-    if (isErr || isHung || isTimeOut || isSuccess) {
-      // 确定终止的类型标签
-      const type = (isErr || isHung) ? 'ERROR' : (isTimeOut ? 'TIMEOUT' : 'SUCCESS');
-
-      // 确定具体显示的原因描述
+    if (isErr || isTimeOut || isSuccess || isHung) {
       let reason = "";
-      if (isErr) reason = `页面显示: ${title}`;
-      else if (isHung) reason = `由于“${title}”导致页面挂起`;
-      else if (isTimeOut) reason = `运行时间超过 ${CONFIG.maxTime / 60000} 分钟`;
+      if (isErr) reason = `页面报错: ${title}`;
+      else if (isTimeOut) reason = `达到最大运行时间 (${CONFIG.maxTime / 60000}分钟)`;
+      else if (isHung) reason = `页面无响应 (原因: ${title})`;
       else if (isSuccess) reason = `任务顺利完成`;
 
-      if (isErr || isHung || isTimeOut) {
+      if (isErr || isTimeOut || isHung) {
+        const type = isTimeOut ? 'TIMEOUT' : 'ERROR';
         const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
+        
         if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
         const imgPath = path.join(CONFIG.errorDir, name);
 
-        console.log(`📸 异常终止 [${type}]: ${reason}`);
+        console.log(`📸 异常终止: ${reason}`);
         await page.screenshot({ path: imgPath }).catch(() => { });
         await uploadToGithub(imgPath, name).catch(() => { });
       } else {
