@@ -80,7 +80,6 @@ export async function initApp() {
       username: e.NODE_USERNAME,
       expires_in: e.NODE_EXPIRES_IN || '604800',
       menuList: e.NODE_MENU_LIST || '[]',
-      DEFAULT_DB: 'sqlite',
     };
     Object.entries(conf).forEach(([k, v]) => localStorage.setItem(k, v || ''));
   }, env);
