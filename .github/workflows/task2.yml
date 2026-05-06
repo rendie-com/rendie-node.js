@@ -70,7 +70,11 @@ jobs:
           # 合并数据库并清理临时目录
           [ -d "./db01" ] && cp -rn ./db01/* . && rm -rf db01
           [ -d "./db02" ] && cp -rn ./db02/* . && rm -rf db02
-          
+
+          # 1. 并行安装依赖和系统库
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
+          PID_APT=$!
+
           # 并行安装依赖 (使用 --prefer-offline 进一步提速)
           npm ci --prefix node.js --prefer-offline --no-audit &
           PID_MAIN=$!
