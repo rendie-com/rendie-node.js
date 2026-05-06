@@ -20,7 +20,6 @@ export const CONFIG = {
 };
 
 const GOTO_TIMEOUT_MS = 30_000;
-const TITLE_TIMEOUT_MS = 5_000;
 
 async function ensureBrowser() {
   if (isBrowserConnected(browser)) return browser;
@@ -32,17 +31,39 @@ async function ensureBrowser() {
     ignoreHTTPSErrors: true,
   });
 
-  browser.on('disconnected', () => {
-    // 保持静默：监控循环会自然退出
-  });
-
   return browser;
 }
 
 async function ensurePage() {
   if (page && !page.isClosed()) return page;
   if (!isBrowserConnected(browser)) await ensureBrowser();
+  
   page = await browser.newPage();
+
+  // --- 🚩 异常检测监听器：实时排查跳转/挂起原因 ---
+  
+  // 1. 监听请求失败（网络层：如连不上后端、DNS 错误）
+  page.on('requestfailed', request => {
+    const url = request.url();
+    const type = request.resourceType();
+    if (['document', 'script', 'xhr', 'fetch'].includes(type)) {
+      console.log(`❌ 网络请求失败: [${type}] ${url} -> ${request.failure()?.errorText}`);
+    }
+  });
+
+  // 2. 监听 HTTP 状态异常（业务层：如 404, 500）
+  page.on('response', response => {
+    const status = response.status();
+    if (status >= 400) {
+      console.log(`🚫 HTTP 异常 [${status}]: ${response.url()}`);
+    }
+  });
+
+  // 3. 监听浏览器内部 JS 运行时错误（崩溃层：如变量未定义导致的白屏）
+  page.on('pageerror', err => {
+    console.log(`💀 浏览器脚本崩溃: ${err.message}`);
+  });
+
   return page;
 }
 
@@ -66,7 +87,6 @@ export async function initApp() {
 
   console.log(`\n🔑 尝试进入系统: ${CONFIG.url}`);
 
-  // --- 优化后的 goto 逻辑 ---
   try {
     await page.goto(CONFIG.url, {
       waitUntil: 'networkidle2',
@@ -74,8 +94,8 @@ export async function initApp() {
     });
     console.log("✅ 页面加载成功");
   } catch (e) {
-    console.log(`\n❌ 访问失败: 无法连接到 ${CONFIG.url}`);
-    console.log(`💡 请确保您的前端服务已启动 (npm run dev)`);
+    console.log(`\n❌ 访问失败: 无法连接到 ${CONFIG.url} (原因: ${e.message})`);
+    console.log(`💡 提示: 请确保前端服务已启动，且端口与 CONFIG.url 一致`);
     await shutdown();
     throw new Error(`无法连接到 ${CONFIG.url}`);
   }
@@ -85,7 +105,7 @@ export async function runMonitor() {
   const start = Date.now();
   let step = 0;
 
-  while (!isShuttingDown && browser?.connected) {
+  while (!isShuttingDown && isBrowserConnected(browser)) {
     const elapsed = Date.now() - start;
 
     // 1. 获取主页面 URL 和 标题
@@ -95,15 +115,14 @@ export async function runMonitor() {
       return "标题获取失败";
     });
 
-    // 2. 获取所有 iframe 的地址
-    // filter(f => f !== page.mainFrame()) 排除主框架，只留真正的 iframe
+    // 2. 获取 iframe 详情
     const frames = page.frames();
     const iframeUrls = frames
       .filter(f => f !== page.mainFrame())
       .map(f => f.url())
-      .filter(url => url !== 'about:blank'); // 过滤掉空白 iframe
+      .filter(url => url !== 'about:blank');
 
-    // 3. 每 10 秒打印详细报告
+    // 3. 定时报告
     if (step % 10 === 0) {
       console.log(`--- [${formatElapsed(elapsed)}] 状态报告 ---`);
       console.log(`📍 主地址: ${currentUrl}`);
@@ -112,8 +131,6 @@ export async function runMonitor() {
       if (iframeUrls.length > 0) {
         console.log(`🖼️  检测到 ${iframeUrls.length} 个 iframe:`);
         iframeUrls.forEach((url, i) => console.log(`   └─ [${i+1}] ${url}`));
-      } else {
-        console.log(`🖼️  暂无活动 iframe`);
       }
       console.log(`------------------------------`);
     }
