@@ -21,6 +21,7 @@ env:
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "https://www.rendie.com/admin"
+  
 
 jobs:
   automation_job:
