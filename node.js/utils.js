@@ -72,7 +72,7 @@ export function checkProjectEnv(env = process.env) {
   console.log(`\n--- 🚀 Rendie 项目变量检查 ---`);
   const keys = [
     'NODE_USERNAME', 'NODE_ACCESS_TOKEN', 'NODE_REFRESH_TOKEN', 'NODE_EXPIRES_IN',
-    'NODE_MENU_LIST', 'MAX_RUNTIME_MINUTES', 'TARGET_DIR',
+    'TARGET_URL', 'MAX_RUNTIME_MINUTES', 'TARGET_DIR',
     'GITHUB_TOKEN', 'GITHUB_OWNER', 'GITHUB_REPO'
   ];
 

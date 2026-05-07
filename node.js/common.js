@@ -38,7 +38,7 @@ async function ensureBrowser() {
 async function ensurePage() {
   if (page && !page.isClosed()) return page;
   if (!isBrowserConnected(browser)) await ensureBrowser();
-  
+
   page = await browser.newPage();
 
   page.on('requestfailed', request => {
@@ -68,32 +68,46 @@ export async function initApp() {
   await ensureBrowser();
   await ensurePage();
 
-  await page.evaluateOnNewDocument((e) => {
-    const conf = {
-      access_token: e.NODE_ACCESS_TOKEN,
-      refresh_token: e.NODE_REFRESH_TOKEN,
-      username: e.NODE_USERNAME,
-      expires_in: e.NODE_EXPIRES_IN || '604800',
-      menuList: e.NODE_MENU_LIST || '[]',
-    };
-    Object.entries(conf).forEach(([k, v]) => localStorage.setItem(k, v || ''));
-  }, env);
+  const targetUrl = env.TARGET_URL;
 
-  console.log(`\n🔑 尝试进入系统: ${CONFIG.url}`);
+  // 1. 注入配置：利用解构别名一次性完成变量映射
+  await page.evaluateOnNewDocument(({
+    NODE_ACCESS_TOKEN: access_token,
+    NODE_REFRESH_TOKEN: refresh_token,
+    NODE_USERNAME: username,
+    NODE_EXPIRES_IN: expires_in = '604800',
+    TARGET_URL
+  }) => {
+    const conf = {
+      access_token, refresh_token, username, expires_in,
+      menuList: JSON.stringify({
+        top1: 1,
+        top2: {
+          23: {
+            name: "任务", id: "23", isbool: true,
+            url: `${TARGET_URL}/iframe?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04`
+          }
+        }
+      })
+    };
+
+    for (const [k, v] of Object.entries(conf)) {
+      localStorage.setItem(k, v ?? '');
+    }
+  }, { ...env, TARGET_URL: targetUrl });
+
+  // 2. 页面访问逻辑：精简控制台输出与错误抛出
+  console.log(`\n🔑 尝试进入系统: ${targetUrl}`);
 
   try {
-    await page.goto(CONFIG.url, {
-      waitUntil: 'networkidle2',
-      timeout: GOTO_TIMEOUT_MS,
-    });
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: GOTO_TIMEOUT_MS });
     console.log("✅ 页面加载成功");
-  } catch (e) {
-    console.log(`\n❌ 访问失败: 无法连接到 ${CONFIG.url} (原因: ${e.message})`);
+  } catch (err) {
+    console.error(`\n❌ 访问失败: ${targetUrl}\n原因: ${err.message}`);
     await shutdown();
-    throw new Error(`无法连接到 ${CONFIG.url}`);
+    throw err;
   }
 }
-
 export async function runMonitor() {
   const start = Date.now();
   let step = 0;
@@ -116,16 +130,16 @@ export async function runMonitor() {
 
     if (isErr || isTimeOut || isSuccess) {
       const type = isErr ? 'ERROR' : (isTimeOut ? 'TIMEOUT' : 'SUCCESS');
-      
+
       if (type !== 'SUCCESS') {
         console.log(`🚨 终止 [${type}]: ${title}`);
-        
+
         const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
         const imgPath = path.join(CONFIG.errorDir, name);
 
         if (!fs.existsSync(CONFIG.errorDir)) fs.mkdirSync(CONFIG.errorDir, { recursive: true });
-        await page.screenshot({ path: imgPath }).catch(() => {});
-        await uploadToGithub(imgPath, name).catch(() => {});
+        await page.screenshot({ path: imgPath }).catch(() => { });
+        await uploadToGithub(imgPath, name).catch(() => { });
       } else {
         console.log(`✅ ${title}`);
       }
