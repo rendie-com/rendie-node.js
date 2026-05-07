@@ -2,8 +2,8 @@ name: 1.2 Shopee用户相关-4小时 (Cache高速版)
 
 on:
   workflow_dispatch: 
-  # schedule:
-  #   - cron: "0 */4 * * *"
+  schedule:
+    - cron: "0 */4 * * *"
 
 permissions:
   contents: write
