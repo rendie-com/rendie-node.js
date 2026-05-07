@@ -1,4 +1,4 @@
-name: 2.shopee-5min-task
+name: 2.shopee-保持在线-置顶推广-5分钟
 
 on:
   workflow_dispatch:
@@ -28,11 +28,11 @@ jobs:
     timeout-minutes: 5
     defaults:
       run:
-        working-directory: ./node.js  # 统一设置工作目录，减少 cd 命令
+        working-directory: ./node.js
 
     steps:
       - name: 1. Checkout
-        uses: actions/checkout@v4 # 建议使用稳定版 v4
+        uses: actions/checkout@v4
 
       - name: 2. Setup Node.js
         uses: actions/setup-node@v4
@@ -41,7 +41,7 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'node.js/package-lock.json'
 
-      - name: 3. Install & Run
+      - name: 3. Execution
         run: |
           npm ci --prefer-offline --no-audit --no-fund
-          npm run start
+          npm start
