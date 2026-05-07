@@ -21,6 +21,7 @@ env:
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "http://localhost:3000/admin"
+  DB_BASE_PATH: "./sqlite3/shopee/采集箱/粉丝"
 
 jobs:
   automation_job:
@@ -36,7 +37,7 @@ jobs:
         id: db-cache
         uses: actions/cache@v4
         with:
-          path: sqlite3/shopee/采集箱/粉丝
+          path: ${{ env.DB_BASE_PATH }}
           key: shopee-db-v1-${{ github.run_id }}
           restore-keys: |
             shopee-db-v1-
@@ -69,14 +70,14 @@ jobs:
 
       - name: 6. 构建并运行生产环境
         run: |
-          # 1. 目录准备逻辑
-          # 如果缓存不存在，从种子库初始化目录
-          if [ ! -d "./sqlite3/shopee/采集箱/粉丝" ]; then
-            mkdir -p ./sqlite3/shopee/采集箱/粉丝
-            if [ -d "./db_seed" ]; then
-              cp -af ./db_seed/* ./sqlite3/shopee/采集箱/粉丝/
-            fi
+          if [ "${{ steps.db-cache.outputs.cache-hit }}" != "true" ]; then
+            echo "缓存未命中，正在从种子仓库的深层目录初始化..."
+            mkdir -p ${{ env.DB_BASE_PATH }}
+            cp -af db_seed/sqlite3/shopee/采集箱/粉丝/. ${{ env.DB_BASE_PATH }}/
           fi
+          
+          # 2. 确保目录一定存在（防止意外）
+          mkdir -p ${{ env.DB_BASE_PATH }}
 
           # 2. 并行安装依赖和系统库
           sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
