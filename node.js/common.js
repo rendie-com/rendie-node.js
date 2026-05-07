@@ -96,9 +96,6 @@ export async function initApp() {
     }
   }, { ...env, TARGET_URL: targetUrl });
 
-  // 2. 页面访问逻辑：精简控制台输出与错误抛出
-  console.log(`\n🔑 尝试进入系统: ${targetUrl}`);
-
   try {
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: GOTO_TIMEOUT_MS });
     console.log("✅ 页面加载成功");
