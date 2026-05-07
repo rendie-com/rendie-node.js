@@ -48,7 +48,7 @@ jobs:
           path: db02
           fetch-depth: 1
 
-      - name: 5. 环境准备与缓存配置
+      - name: 4. 环境准备与缓存配置
         uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -57,7 +57,7 @@ jobs:
             node.js/package-lock.json
             next.js/package-lock.json
 
-      - name: 6. 构建并运行生产环境
+      - name: 5. 构建并运行生产环境
         run: |
           # 处理数据库文件：从 db02 移出到根目录
           [ -d "./db02" ] && cp -rn ./db02/* . && rm -rf db02
@@ -91,24 +91,33 @@ jobs:
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
 
-      - name: 7. 推送更新后的数据库到指定子目录
+      - name: 6. 极速推送数据库
         if: success()
         run: |
-          git clone https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-crawler.git tmp_sync
-          cp -rf ./sqlite3/shopee/采集箱/粉丝 tmp_sync/sqlite3/shopee/采集箱/
+          # 1. 浅克隆（只拉取最后一层，极快）
+          git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-crawler.git tmp_sync
+          
+          # 2. 确保目标父目录存在
+          mkdir -p tmp_sync/sqlite3/shopee/采集箱/
+          
+          # 3. 同步目录（使用 -a 保持属性，不输出冗余信息）
+          cp -af ./sqlite3/shopee/采集箱/粉丝 tmp_sync/sqlite3/shopee/采集箱/
+          
           cd tmp_sync
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           
+          # 4. 快速检查并推送
           if [ -n "$(git status --porcelain)" ]; then
             git add .
-            git commit -m "chore: 自动更新数据库到 $TARGET_SUBDIR [$(date '+%Y-%m-%d %H:%M:%S')]"
+            # 使用 --no-verify 跳过可能存在的 pre-commit 检查（如果仓库里有的话）
+            git commit -m "fast-sync: $(date '+%m%d-%H%M')"
             git push origin main
           else
-            echo "没有检测到文件变化，跳过推送。"
+            echo "无变化，跳过。"
           fi
 
-      - name: 8. 任务清理：删除 3 天前的运行记录
+      - name: 7. 任务清理：删除 3 天前的运行记录
         if: always()
         run: |
           DEL_DATE=$(date -d '3 days ago' +%Y-%m-%d)
