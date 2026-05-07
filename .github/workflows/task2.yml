@@ -29,12 +29,12 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: 1. 检出代码
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - name: 2. 环境准备
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: 'npm'
