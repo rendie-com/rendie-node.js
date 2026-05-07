@@ -4,6 +4,7 @@ on:
   workflow_dispatch: 
   # schedule:
   #   - cron: "0 */4 * * *"
+
 permissions:
   contents: write
   actions: write
@@ -14,12 +15,12 @@ env:
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
   NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
   NODE_EXPIRES_IN: "1777047860"
-  MAX_RUNTIME_MINUTES: 60
+  MAX_RUNTIME_MINUTES: 1
   TARGET_DIR: "error/task1"
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
-  TARGET_URL: "https://www.rendie.com/admin"
+  TARGET_URL: "http://localhost:3000/admin"
 
 jobs:
   automation_job:
@@ -37,14 +38,6 @@ jobs:
           repository: rendie-com/rendie-next.js
           token: ${{ secrets.MY_PAT }}
           path: next.js
-          fetch-depth: 1
-
-      - name: 3. 下载system数据库
-        uses: actions/checkout@v6
-        with:
-          repository: rendie-com/rendie-sqlite3-system
-          token: ${{ secrets.MY_PAT }}
-          path: db01
           fetch-depth: 1
 
       - name: 3. 下载crawler数据库
@@ -66,8 +59,7 @@ jobs:
 
       - name: 6. 构建并运行生产环境
         run: |
-          # 处理数据库文件
-          [ -d "./db01" ] && cp -rn ./db01/* . && rm -rf db01
+          # 处理数据库文件：从 db02 移出到根目录
           [ -d "./db02" ] && cp -rn ./db02/* . && rm -rf db02
 
           # 1. 并行安装依赖和系统库
@@ -82,7 +74,7 @@ jobs:
           
           wait $PID_APT $PID_MAIN $PID_NEXT
 
-          # 2. 编译 Next.js (生产构建)
+          # 2. 编译 Next.js
           echo "正在编译 Next.js..."
           npm run build --prefix next.js
 
@@ -90,23 +82,36 @@ jobs:
           echo "启动 Next.js 服务..."
           npm run start --prefix next.js & 
           
-          # 给服务启动留出一点缓冲时间
           sleep 10
           
-          # 4. 运行主程序
+          # 4. 运行主程序（这步会更新根目录下的数据库文件）
           cd node.js && npm run start
         env:
           NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXT_PUBLIC_DEFAULT_DB }}  
           NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }}
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
 
-      - name: 7. 任务清理：删除 3 天前的运行记录
+      - name: 7. 推送更新后的数据库到指定子目录
+        if: success()
+        run: |
+          git clone https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-crawler.git tmp_sync
+          cp -rf ./sqlite3/shopee/采集箱/粉丝 tmp_sync/sqlite3/shopee/采集箱/
+          cd tmp_sync
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "chore: 自动更新数据库到 $TARGET_SUBDIR [$(date '+%Y-%m-%d %H:%M:%S')]"
+            git push origin main
+          else
+            echo "没有检测到文件变化，跳过推送。"
+          fi
+
+      - name: 8. 任务清理：删除 3 天前的运行记录
         if: always()
         run: |
-          # 获取 3 天前的日期格式 (YYYY-MM-DD)
           DEL_DATE=$(date -d '3 days ago' +%Y-%m-%d)
-          
-          # 删除所有在 3 天前创建的已完成记录
           gh run list --status completed --created "<$DEL_DATE" --limit 100 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
