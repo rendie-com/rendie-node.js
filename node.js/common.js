@@ -133,7 +133,7 @@ export async function runMonitor() {
 
       if (type !== 'SUCCESS') {
         console.log(`🚨 终止 [${type}]: ${title}`);
-
+        await delay(CONFIG.interval);//不延时截图的报错还没出来。
         const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
         const imgPath = path.join(CONFIG.errorDir, name);
 
