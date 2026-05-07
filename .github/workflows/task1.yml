@@ -2,8 +2,8 @@ name: 1.Shopee用户相关-4小时
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 */4 * * *"
+  # schedule:
+  #   - cron: "0 */4 * * *"
 
 permissions:
   contents: write
