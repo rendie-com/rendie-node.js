@@ -1,0 +1,116 @@
+name: 1.2 Shopee用户相关-4小时 (Cache高速版)
+
+on:
+  workflow_dispatch: 
+  # schedule:
+  #   - cron: "0 */4 * * *"
+
+permissions:
+  contents: write
+  actions: write
+
+env:   
+  TZ: Asia/Shanghai
+  NODE_USERNAME: "4hour"
+  NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
+  NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
+  NODE_EXPIRES_IN: "1777047860"
+  MAX_RUNTIME_MINUTES: 1
+  TARGET_DIR: "error/task1"
+  GITHUB_TOKEN: ${{ secrets.MY_PAT }}
+  GITHUB_OWNER: "rendie-com"
+  GITHUB_REPO: "rendie-node.js-error"
+  TARGET_URL: "http://localhost:3000/admin"
+
+jobs:
+  automation_job:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60 
+    steps:
+      - name: 1. 下载主程序代码
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: 2. 数据库高速缓存还原 (读档)
+        id: db-cache
+        uses: actions/cache@v4
+        with:
+          path: sqlite3/shopee/采集箱/粉丝
+          key: shopee-db-v1-${{ github.run_id }}
+          restore-keys: |
+            shopee-db-v1-
+
+      - name: 3. 下载核心前端代码
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-next.js
+          token: ${{ secrets.MY_PAT }}
+          path: next.js
+          fetch-depth: 1
+
+      - name: 4. (备选) 下载初始数据库仓库
+        if: steps.db-cache.outputs.cache-hit != 'true'
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-sqlite3-shopee-crawler
+          token: ${{ secrets.MY_PAT }}
+          path: db_seed
+          fetch-depth: 1
+
+      - name: 5. 环境准备与缓存配置
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
+          cache-dependency-path: |
+            node.js/package-lock.json
+            next.js/package-lock.json
+
+      - name: 6. 构建并运行生产环境
+        run: |
+          # 1. 目录准备逻辑
+          # 如果缓存不存在，从种子库初始化目录
+          if [ ! -d "./sqlite3/shopee/采集箱/粉丝" ]; then
+            mkdir -p ./sqlite3/shopee/采集箱/粉丝
+            if [ -d "./db_seed" ]; then
+              cp -af ./db_seed/* ./sqlite3/shopee/采集箱/粉丝/
+            fi
+          fi
+
+          # 2. 并行安装依赖和系统库
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
+          PID_APT=$!
+
+          npm ci --prefix node.js --prefer-offline --no-audit --progress=false &
+          PID_MAIN=$!
+          
+          npm ci --prefix next.js --prefer-offline --no-audit --progress=false &
+          PID_NEXT=$!
+          
+          wait $PID_APT $PID_MAIN $PID_NEXT
+
+          # 3. 编译 Next.js
+          echo "正在编译 Next.js..."
+          npm run build --prefix next.js
+
+          # 4. 启动 Next.js 生产服务
+          echo "启动 Next.js 服务..."
+          npm run start --prefix next.js & 
+          
+          sleep 10
+          
+          # 5. 运行主程序（程序会读写 ./sqlite3/shopee/采集箱/粉丝 里的 .db 文件）
+          cd node.js && npm run start
+        env:
+          NEXT_PUBLIC_DEFAULT_DB: "pg02" 
+          NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
+          NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
+
+      - name: 7. 任务清理：删除旧运行记录
+        if: always()
+        run: |
+          DEL_DATE=$(date -d '3 days ago' +%Y-%m-%d)
+          gh run list --status completed --created "<$DEL_DATE" --limit 100 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
