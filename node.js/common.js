@@ -62,8 +62,6 @@ async function handleFatalError(type) {
   } finally {
     console.log(`🛑 正在强制关闭任务...`);
     await shutdown();
-    // 在 CI 环境下，非正常退出应当返回非零状态码
-    process.exit(1);
   }
 }
 

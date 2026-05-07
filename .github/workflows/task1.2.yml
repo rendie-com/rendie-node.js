@@ -69,25 +69,13 @@ jobs:
             next.js/package-lock.json
 
       - name: 6. 构建并运行生产环境
-        run: |        
-         if [ -z "$(ls -A ${{ env.DB_BASE_PATH }}/*.db 2>/dev/null)" ]; then
-            echo "检测到目录为空或无数据库文件，正在从种子仓库初始化..."
-            mkdir -p ${{ env.DB_BASE_PATH }}
-            
-            # 只有当 db_seed 目录存在时才拷贝（防止未下载报错）
-            if [ -d "db_seed/sqlite3/shopee/采集箱/粉丝" ]; then
-              cp -af db_seed/sqlite3/shopee/采集箱/粉丝/. ${{ env.DB_BASE_PATH }}/
-              echo "种子数据同步完成。"
-            else
-              echo "错误：未发现种子仓库目录，请检查 Step 4 是否运行。"
-            fi
-          else
-            echo "缓存已成功恢复数据，跳过初始化步骤。"
+        run: |                 
+          mkdir -p ${{ env.DB_BASE_PATH }}                    
+          if [ -d "db_seed/sqlite3/shopee/采集箱/粉丝" ]; then
+            cp -af db_seed/sqlite3/shopee/采集箱/粉丝/. ${{ env.DB_BASE_PATH }}/
+            echo "种子数据同步完成。"          
           fi
-          
-          # 2. 确保目录一定存在（防止意外）
-          mkdir -p ${{ env.DB_BASE_PATH }}
-
+         
           # 2. 并行安装依赖和系统库
           sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
           PID_APT=$!
