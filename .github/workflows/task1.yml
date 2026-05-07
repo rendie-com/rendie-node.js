@@ -1,9 +1,10 @@
 name: 1.Shopee用户相关-4小时
 
 on:
-  workflow_dispatch: 
-  # schedule:
-  #   - cron: "0 */4 * * *"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */4 * * *"
+
 permissions:
   contents: write
   actions: write
@@ -25,87 +26,32 @@ jobs:
   automation_job:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: node.js
     steps:
-      - name: 1. 下载主程序代码
+      - name: 1. 下载代码
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
 
-      - name: 2. 下载核心前端代码
-        uses: actions/checkout@v6
-        with:
-          repository: rendie-com/rendie-next.js
-          token: ${{ secrets.MY_PAT }}
-          path: next.js
-          fetch-depth: 1
-
-      - name: 3. 下载system数据库
-        uses: actions/checkout@v6
-        with:
-          repository: rendie-com/rendie-sqlite3-system
-          token: ${{ secrets.MY_PAT }}
-          path: db01
-          fetch-depth: 1
-
-      - name: 3. 下载crawler数据库
-        uses: actions/checkout@v6
-        with:
-          repository: rendie-com/rendie-sqlite3-shopee-crawler
-          token: ${{ secrets.MY_PAT }}
-          path: db02
-          fetch-depth: 1
-
-      - name: 5. 环境准备与缓存配置
+      - name: 2. 环境配置
         uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'npm'
-          cache-dependency-path: |
-            node.js/package-lock.json
-            next.js/package-lock.json
+          cache-dependency-path: node.js/package-lock.json
 
-      - name: 6. 构建并运行生产环境
+      - name: 3. 安装依赖并启动
         run: |
-          # 处理数据库文件
-          [ -d "./db01" ] && cp -rn ./db01/* . && rm -rf db01
-          [ -d "./db02" ] && cp -rn ./db02/* . && rm -rf db02
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends ttf-wqy-zenhei libgbm-dev
+          npm ci --prefer-offline --no-audit
+          npm start
 
-          # 1. 并行安装依赖和系统库
-          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
-          PID_APT=$!
-
-          npm ci --prefix node.js --prefer-offline --no-audit --progress=false &
-          PID_MAIN=$!
-          
-          npm ci --prefix next.js --prefer-offline --no-audit --progress=false &
-          PID_NEXT=$!
-          
-          wait $PID_APT $PID_MAIN $PID_NEXT
-
-          # 2. 编译 Next.js (生产构建)
-          echo "正在编译 Next.js..."
-          npm run build --prefix next.js
-
-          # 3. 启动 Next.js 生产服务
-          echo "启动 Next.js 服务..."
-          npm run start --prefix next.js & 
-          
-          # 给服务启动留出一点缓冲时间
-          sleep 10
-          
-          # 4. 运行主程序
-          cd node.js && npm run start
-        env:
-          NEXTJS_CONFIG_DEFAULT_DB: ${{ secrets.NEXTJS_CONFIG_DEFAULT_DB }}  
-          NEXTJS_CONFIG_SQLITE: ${{ secrets.NEXTJS_CONFIG_SQLITE }}
-
-      - name: 7. 任务清理：删除 3 天前的运行记录
+      - name: 4. 任务清理
         if: always()
+        working-directory: .
         run: |
-          # 获取 3 天前的日期格式 (YYYY-MM-DD)
           DEL_DATE=$(date -d '3 days ago' +%Y-%m-%d)
-          
-          # 删除所有在 3 天前创建的已完成记录
-          gh run list --status completed --created "<$DEL_DATE" --limit 100 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
+          gh run list --status completed --created "<$DEL_DATE" --json databaseId -q '.[].databaseId' | xargs -r gh run delete
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
