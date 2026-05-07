@@ -70,6 +70,9 @@ jobs:
 
       - name: 6. 构建并运行生产环境
         run: |
+          echo "--- 检查缓存目标路径是否有文件 ---"
+          ls -R ${{ env.DB_BASE_PATH }}
+          
           if [ "${{ steps.db-cache.outputs.cache-hit }}" != "true" ]; then
             echo "缓存未命中，正在从种子仓库的深层目录初始化..."
             mkdir -p ${{ env.DB_BASE_PATH }}
