@@ -20,7 +20,6 @@ env:
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "https://www.rendie.com/admin"
-  NODE_MENU_LIST: '{"top1":1,"top2":{"23":{"name":"任务","id":"23","isbool":true,"url":"https://www.rendie.com/view/Default/admin/html/iframe.html?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04"}}}'
 
 jobs:
   automation_job:
