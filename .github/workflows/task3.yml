@@ -24,7 +24,7 @@ jobs:
           key: db-aaaa-${{ github.run_id }}         
 
       - name: 4. (备选) 下载初始数据库仓库
-        if: hashFiles('aaaa/**') == ''
+        if: hashFiles('bbb/**') == ''
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-system
