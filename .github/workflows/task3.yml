@@ -27,7 +27,7 @@ jobs:
             db-aaaa-
 
       - name: 4. (备选) 下载初始数据库仓库
-        if: steps.cache-db.outputs.cache-hit != 'true' && steps.cache-db.outputs.cache-primary-key == ''
+        if: hashFiles('aaaa/**') == ''
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-system
