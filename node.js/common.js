@@ -179,7 +179,7 @@ export async function runMonitor() {
     const title = await page.title().catch(() => "");
 
     if (step % 10 === 0) {
-      console.log(`[${formatElapsed(elapsed)}] 标题: ${title || "---"}`);
+      console.log(`[${formatElapsed(elapsed)}] : ${title || "页面挂起"}`);
     }
 
     const isErr = title.includes("出错");
