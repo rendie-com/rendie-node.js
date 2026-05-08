@@ -110,8 +110,8 @@ jobs:
           sleep 10
           cd node.js && npm run start
 
-      - name: 删除【shopee/营销中心/】【shopee/商品/】缓存
+      - name: 9. 删除【shopee/营销中心/】【shopee/商品/】缓存
         run: |
-          gh actions-cache list --limit 100 | grep -E "shopee-product-|shopee-marketing-" | cut -f 1 | xargs -I {} gh actions-cache delete {} --confirm
+          gh cache list --limit 100 | grep -E "shopee-product-|shopee-marketing-" | cut -f 1 | xargs -I {} gh cache delete {}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
