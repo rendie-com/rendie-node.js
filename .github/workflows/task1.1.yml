@@ -21,7 +21,7 @@ env:
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "http://localhost:3000/admin"
-  DB_BASE_PATH: "./sqlite3/shopee/采集箱"
+  DB_BASE_PATH: "./sqlite3"
 
 jobs:
   automation_job:
@@ -98,6 +98,6 @@ jobs:
           
           cd node.js && npm run start
         env:
-          NEXT_PUBLIC_DEFAULT_DB: "pg02" 
+          NEXT_PUBLIC_DEFAULT_DB: "sqlite" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
