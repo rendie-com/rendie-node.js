@@ -11,7 +11,7 @@ permissions:
 
 env:   
   TZ: Asia/Shanghai
-  NODE_USERNAME: "4hour"
+  NODE_USERNAME: "1day"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_3 }}
   NODE_REFRESH_TOKEN: "xxxx"
   NODE_EXPIRES_IN: "1777047860"
@@ -21,7 +21,8 @@ env:
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "http://localhost:3000/admin"
-  DB_BASE_PATH: "./sqlite3/shopee/采集箱"
+  DB_01: "./sqlite3/shopee/采集箱"
+  DB_02: "./sqlite3/shopee/商品"
 
 jobs:
   automation_job:
@@ -33,15 +34,7 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 2. 数据库高速缓存还原 (读档)
-        uses: actions/cache@v5
-        with:
-          path: ${{ env.DB_BASE_PATH }}
-          key: shopee-crawler-${{ github.run_id }}
-          restore-keys: |
-            shopee-crawler-
-
-      - name: 3. 下载核心前端代码
+      - name: 2. 下载核心前端代码
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-next.js
@@ -49,16 +42,41 @@ jobs:
           path: next.js
           fetch-depth: 1
 
-      - name: 4. (备选) 下载初始数据库仓库
-        if: hashFiles(format('{0}/**/*.db', env.DB_BASE_PATH)) == ''
+      - name: 3. 数据库高速缓存还原 (读档)
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.DB_01 }}
+          key: shopee-marketing-${{ github.run_id }}
+          restore-keys: |
+            shopee-marketing-
+
+      - name: 4. 数据库高速缓存还原 (读档)
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.DB_02 }}
+          key: shopee-product-${{ github.run_id }}
+          restore-keys: |
+            shopee-product-
+
+      - name: 5. (备选) 下载初始数据【shopee/营销中心/】
+        if: hashFiles(format('{0}/**/*.db', env.DB_01)) == ''
         uses: actions/checkout@v6
         with:
-          repository: rendie-com/rendie-sqlite3-shopee-crawler
+          repository: rendie-com/rendie-sqlite3-shopee-marketing
           token: ${{ secrets.MY_PAT }}
-          path: db_seed
+          path: db_01
           fetch-depth: 1
 
-      - name: 5. 环境准备与缓存配置
+      - name: 6. (备选) 下载初始数据【shopee/商品/】
+        if: hashFiles(format('{0}/**/*.db', env.DB_02)) == ''
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-sqlite3-shopee-product
+          token: ${{ secrets.MY_PAT }}
+          path: db_02
+          fetch-depth: 1
+
+      - name: 7. 环境准备与缓存配置
         uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -67,11 +85,13 @@ jobs:
             node.js/package-lock.json
             next.js/package-lock.json
 
-      - name: 6. 构建并运行生产环境
+      - name: 8. 构建并运行生产环境
         run: |                                          
           if [ -d "db_seed" ]; then
-            mkdir -p "${{ env.DB_BASE_PATH }}"
-            cp -af db_seed/${{ env.DB_BASE_PATH }}/. ${{ env.DB_BASE_PATH }}/
+            mkdir -p "${{ env.DB_01 }}"
+            mkdir -p "${{ env.DB_02 }}"
+            cp -af db_seed/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
+            cp -af db_seed/${{ env.DB_02 }}/. ${{ env.DB_02 }}/
             echo "已复制初始数据库仓库"       
           fi
          
