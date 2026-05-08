@@ -38,11 +38,9 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.DB_BASE_PATH }}
-          # 核心技巧：Key 依然带 ID，保证每次运行都能存下“新版本”
-          key: rendie-db-${{ github.run_id }}
-          # 模糊匹配：总是找最新的那个 rendie-db- 开头的文件
+          key: shopee-crawler-${{ github.run_id }}
           restore-keys: |
-            rendie-db-
+            shopee-crawler-
 
       - name: 3. 下载核心前端代码
         uses: actions/checkout@v6
