@@ -1,0 +1,93 @@
+name: 3.2 SHOPEE-商品-营销中心-1天(备份)
+
+on:
+  workflow_dispatch: 
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: write
+  actions: write
+
+env:   
+  TZ: Asia/Shanghai
+  DB_01: "./sqlite3/shopee/营销中心"
+  DB_02: "./sqlite3/shopee/商品"
+
+jobs:
+  automation_job:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80 
+    steps:
+      - name: 1. 下载主程序代码
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: 2. 【shopee/营销中心/】数据库还原 (读档)
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.DB_01 }}
+          key: shopee-marketing-${{ github.run_id }}
+          restore-keys: |
+            shopee-marketing-
+
+      - name: 3. 【shopee/商品/】数据库还原 (读档)
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.DB_02 }}
+          key: shopee-product-${{ github.run_id }}
+          restore-keys: |
+            shopee-product-
+
+      - name: 4. 推送数据库（备份至远程仓库）
+        run: |
+          # 定义需要同步的映射 "本地目录|远程仓库名"
+          SYNC_LIST=(
+            "${{ env.DB_01 }}|rendie-sqlite3-shopee-marketing"
+            "${{ env.DB_02 }}|rendie-sqlite3-shopee-product"
+          )
+
+          for item in "${SYNC_LIST[@]}"; do
+            LOCAL_PATH="${item%%|*}"
+            REPO_NAME="${item##*|}"
+            
+            echo "--- 开始备份: $LOCAL_PATH -> $REPO_NAME ---"
+            
+            # 1. 检查本地目录是否存在且不为空
+            if [ ! -d "$LOCAL_PATH" ] || [ -z "$(ls -A $LOCAL_PATH 2>/dev/null)" ]; then
+              echo "⚠️ 路径 $LOCAL_PATH 为空，跳过。"
+              continue
+            fi
+
+            # 2. 浅克隆远程仓库
+            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/${REPO_NAME}.git tmp_sync
+            
+            # 3. 同步数据
+            mkdir -p "tmp_sync/$LOCAL_PATH"
+            cp -af "$LOCAL_PATH/." "tmp_sync/$LOCAL_PATH/"
+            
+            # 4. 提交并推送
+            cd tmp_sync
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            
+            if [ -n "$(git status --porcelain)" ]; then
+              git add .
+              git commit -m "backup-sync: $(date '+%Y%m%d-%H%M')"
+              git push origin main
+              echo "✅ 推送成功。"
+            else
+              echo "ℹ️ 数据无变化，跳过推送。"
+            fi
+            
+            cd ..
+          done
+
+      - name: 5. 任务清理：删除旧运行记录
+        if: always()
+        run: |
+          DEL_DATE=$(date -d '3 days ago' +%Y-%m-%d)
+          gh run list --status completed --created "<$DEL_DATE" --limit 100 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
