@@ -1,4 +1,4 @@
-name: 1.2 Shopee用户相关-4小时 (Cache高速版)
+name: 1.1 Shopee用户相关-4小时 (Cache高速版)
 
 on:
   workflow_dispatch: 
@@ -101,37 +101,3 @@ jobs:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
-
-      - name: 推送数据库（备份）
-        if: success()
-        run: |
-          # 1. 浅克隆（只拉取最后一层，极快）
-          git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-crawler.git tmp_sync
-          
-          # 2. 确保目标父目录存在
-          mkdir -p tmp_sync/sqlite3/shopee/采集箱/
-          
-          # 3. 同步目录（使用 -a 保持属性，不输出冗余信息）
-          cp -af ./sqlite3/shopee/采集箱 tmp_sync/sqlite3/shopee/
-          
-          cd tmp_sync
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # 4. 快速检查并推送
-          if [ -n "$(git status --porcelain)" ]; then
-            git add .
-            # 使用 --no-verify 跳过可能存在的 pre-commit 检查（如果仓库里有的话）
-            git commit -m "fast-sync: $(date '+%m%d-%H%M')"
-            git push origin main
-          else
-            echo "无变化，跳过。"
-          fi
-
-      - name: 7. 任务清理：删除旧运行记录
-        if: always()
-        run: |
-          DEL_DATE=$(date -d '3 days ago' +%Y-%m-%d)
-          gh run list --status completed --created "<$DEL_DATE" --limit 100 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
