@@ -70,8 +70,10 @@ jobs:
       - name: 6. 构建并运行生产环境
         run: |                                          
           if [ -d "db_seed" ]; then
-            cp -af db_seed/${{ env.DB_BASE_PATH }}/. ${{ env.DB_BASE_PATH }}/
-            echo "首次下载数据"          
+              # 确保目标目录存在，避免 cp 报错
+              mkdir -p "${{ env.DB_BASE_PATH }}"              
+              cp -af db_seed/${{ env.DB_BASE_PATH }}/. ${{ env.DB_BASE_PATH }}/
+              echo "首次下载数据并已搬运至目标路径"
           fi
          
           # 2. 并行安装依赖和系统库
