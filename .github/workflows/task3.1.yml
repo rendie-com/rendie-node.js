@@ -42,21 +42,21 @@ jobs:
           path: next.js
           fetch-depth: 1
 
-      - name: 3. 【shopee/营销中心/】数据库高速缓存还原 (读档)
-        uses: actions/cache@v5
-        with:
-          path: ${{ env.DB_01 }}
-          key: shopee-marketing-${{ github.run_id }}
-          restore-keys: |
-            shopee-marketing-
+      # - name: 3. 【shopee/营销中心/】数据库高速缓存还原 (读档)
+      #   uses: actions/cache@v5
+      #   with:
+      #     path: ${{ env.DB_01 }}
+      #     key: shopee-marketing-${{ github.run_id }}
+      #     restore-keys: |
+      #       shopee-marketing-
 
-      - name: 4. 【shopee/商品/】数据库高速缓存还原 (读档)
-        uses: actions/cache@v5
-        with:
-          path: ${{ env.DB_02 }}
-          key: shopee-product-${{ github.run_id }}
-          restore-keys: |
-            shopee-product-
+      # - name: 4. 【shopee/商品/】数据库高速缓存还原 (读档)
+      #   uses: actions/cache@v5
+      #   with:
+      #     path: ${{ env.DB_02 }}
+      #     key: shopee-product-${{ github.run_id }}
+      #     restore-keys: |
+      #       shopee-product-
 
       - name: 5. (备选) 下载初始数据【shopee/营销中心/】
         if: hashFiles(format('{0}/**/*.db', env.DB_01)) == ''
@@ -88,8 +88,11 @@ jobs:
       - name: 8. 构建并运行生产环境
         run: |                                          
           if [ -d "db_01" ]; then
+
+            echo "--111-" 
             cd db_01
-            ls
+            tree -L 2
+            echo "--222-" 
             mkdir -p "${{ env.DB_01 }}"
             cp -af db_01/sqlite3/shopee/营销中心/. ${{ env.DB_01 }}/
             echo "已复制${{ env.DB_01 }}初始数据"       
