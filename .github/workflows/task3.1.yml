@@ -88,6 +88,8 @@ jobs:
       - name: 8. 构建并运行生产环境
         run: |                                          
           if [ -d "db_01" ]; then
+            cd db_01
+            ls
             mkdir -p "${{ env.DB_01 }}"
             cp -af db_01/sqlite3/shopee/营销中心/. ${{ env.DB_01 }}/
             echo "已复制${{ env.DB_01 }}初始数据"       
