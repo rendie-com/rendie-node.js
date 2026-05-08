@@ -50,13 +50,13 @@ jobs:
           restore-keys: |
             shopee-marketing-
 
-      # - name: 4. 【shopee/商品/】数据库还原 (读档)
-      #   uses: actions/cache@v5
-      #   with:
-      #     path: ${{ env.DB_02 }}
-      #     key: shopee-product-${{ github.run_id }}
-      #     restore-keys: |
-      #       shopee-product-
+      - name: 4. 【shopee/商品/】数据库还原 (读档)
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.DB_02 }}
+          key: shopee-product-${{ github.run_id }}
+          restore-keys: |
+            shopee-product-
 
       - name: 5/6. 数据库状态检查与同步
         run: |
