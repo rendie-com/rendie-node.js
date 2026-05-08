@@ -50,7 +50,7 @@ jobs:
           fetch-depth: 1
 
       - name: 4. (备选) 下载初始数据库仓库
-        if: hashFiles(format('{0}/**/*.db', env.DB_BASE_PATH)) == ''
+        if: hashFiles(format('{0}/**', env.DB_BASE_PATH)) != ''
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-shopee-crawler

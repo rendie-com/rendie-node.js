@@ -1,4 +1,4 @@
-name: 用pnpm运行next.js
+name: aaaaa
 
 on:
   workflow_dispatch: 
@@ -17,21 +17,20 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: 恢复数据库缓存
+        id: cache-db  
+        uses: actions/cache@v3
         with:
-          node-version: 24
+          path: rendie-sqlite3-system
+          key: db-aaaa-${{ github.run_id }}
+          restore-keys: |
+            db-aaaa-
 
-      - name: 📂 拉取前端核心
-        uses: actions/checkout@v4
+      - name: 4. (备选) 下载初始数据库仓库
+        if: steps.cache-db.outputs.cache-hit != 'true'
+        uses: actions/checkout@v6
         with:
-          repository: rendie-com/rendie-next.js
+          repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: rendie-next.js
-          ref: main
-
-      - name: 🚀 启动服务与执行脚本
-        run: |
-          cd rendie-next.js
-          npm i          
-          npm run dev
+          path: aaaa
+          fetch-depth: 1
