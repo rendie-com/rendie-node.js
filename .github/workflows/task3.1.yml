@@ -21,7 +21,7 @@ env:
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "http://localhost:3000/admin"
-  DB_01: "./sqlite3/shopee/采集箱"
+  DB_01: "./sqlite3/shopee/营销中心"
   DB_02: "./sqlite3/shopee/商品"
 
 jobs:
