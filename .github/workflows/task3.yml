@@ -17,14 +17,11 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 恢复数据库缓存
-        id: cache-db  
+      - name: 恢复数据库缓存        
         uses: actions/cache@v3
         with:
-          path: aaaa
-          key: db-aaaa-${{ github.run_id }}
-          restore-keys: |
-            db-aaaa-
+          path: bbb
+          key: db-aaaa-${{ github.run_id }}         
 
       - name: 4. (备选) 下载初始数据库仓库
         if: hashFiles('aaaa/**') == ''
@@ -32,5 +29,5 @@ jobs:
         with:
           repository: rendie-com/rendie-sqlite3-system
           token: ${{ secrets.MY_PAT }}
-          path: aaaa
+          path: bbb
           fetch-depth: 1
