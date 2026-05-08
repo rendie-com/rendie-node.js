@@ -21,7 +21,7 @@ jobs:
         id: cache-db  
         uses: actions/cache@v3
         with:
-          path: rendie-sqlite3-system
+          path: aaaa
           key: db-aaaa-${{ github.run_id }}
           restore-keys: |
             db-aaaa-
