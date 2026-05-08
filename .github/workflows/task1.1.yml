@@ -72,7 +72,7 @@ jobs:
           if [ -d "db_seed" ]; then
             mkdir -p "${{ env.DB_BASE_PATH }}"
             cp -af db_seed/${{ env.DB_BASE_PATH }}/. ${{ env.DB_BASE_PATH }}/
-            echo "首次下载数据并已搬运至目标路径"       
+            echo "已复制初始数据库仓库"       
           fi
          
           # 2. 并行安装依赖和系统库

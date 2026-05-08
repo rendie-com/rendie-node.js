@@ -3,8 +3,7 @@ name: 1.2 Shopee用户相关-4小时 (备份)
 on:
   workflow_dispatch: 
   schedule:
-    - cron: "0 */4 * * *"
-
+    - cron: "0 0 * * *"
 permissions:
   contents: write
   actions: write
