@@ -76,6 +76,12 @@ jobs:
           cache-dependency-path: |
             node.js/package-lock.json
             next.js/package-lock.json
+            
+      - name: Cache APT Packages
+        uses: utils/apt-cache-action@v2
+        with:
+          packages: ttf-wqy-zenhei libgbm-dev
+          key: apt-cache-${{ runner.os }}
 
       - name: 6. 构建并运行生产环境
         run: |                                          
