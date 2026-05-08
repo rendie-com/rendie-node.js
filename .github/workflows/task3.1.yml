@@ -97,7 +97,7 @@ jobs:
             cp -af db_02/${{ env.DB_02 }}/. ${{ env.DB_02 }}/
             echo "已复制${{ env.DB_02 }}初始数据库仓库"       
           fi
-          sleep 100
+          sleep 3
           echo "--==================-"            
           tree -L 4
           echo "--====================-" 
