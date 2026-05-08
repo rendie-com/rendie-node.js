@@ -21,7 +21,7 @@ env:
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "http://localhost:3000/admin"
-  DB_BASE_PATH: "./sqlite3/shopee/采集箱/粉丝"
+  DB_BASE_PATH: "./sqlite3/shopee/采集箱"
 
 jobs:
   automation_job:
@@ -71,8 +71,8 @@ jobs:
       - name: 6. 构建并运行生产环境
         run: |                 
           mkdir -p ${{ env.DB_BASE_PATH }}                    
-          if [ -d "db_seed/sqlite3/shopee/采集箱/粉丝" ]; then
-            cp -af db_seed/sqlite3/shopee/采集箱/粉丝/. ${{ env.DB_BASE_PATH }}/
+          if [ -d "db_seed/sqlite3/shopee/采集箱" ]; then
+            cp -af db_seed/sqlite3/shopee/采集箱/. ${{ env.DB_BASE_PATH }}/
             echo "种子数据同步完成。"          
           fi
          
@@ -98,7 +98,6 @@ jobs:
           
           sleep 10
           
-          # 5. 运行主程序（程序会读写 ./sqlite3/shopee/采集箱/粉丝 里的 .db 文件）
           cd node.js && npm run start
         env:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
