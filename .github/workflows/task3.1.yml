@@ -34,7 +34,7 @@ jobs:
           git clone --depth 1 https://github.com/${{ github.repository }} .
           git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-next.js next.js
 
-      - name: 3. 【shopee/营销中心/】数据库高速缓存还原 (读档)
+      - name: 3. 【shopee/营销中心/】数据库还原 (读档)
         uses: actions/cache@v5
         with:
           path: ${{ env.DB_01 }}
@@ -42,7 +42,7 @@ jobs:
           restore-keys: |
             shopee-marketing-
 
-      - name: 4. 【shopee/商品/】数据库高速缓存还原 (读档)
+      - name: 4. 【shopee/商品/】数据库还原 (读档)
         uses: actions/cache@v5
         with:
           path: ${{ env.DB_02 }}
@@ -50,17 +50,24 @@ jobs:
           restore-keys: |
             shopee-product-
 
-      - name: 5/6. (备选) 下载并清理初始数据
+      - name: 5/6. 数据库状态检查与同步
         run: |
-          # 处理 DB_01
-          if [ -z "$(ls -A ${{ env.DB_01 }} 2>/dev/null)" ]; then
+          # 检查 DB_01 (营销中心)
+          if [ -d "${{ env.DB_01 }}" ] && [ "$(ls -A ${{ env.DB_01 }} 2>/dev/null)" ]; then
+            echo "✅ [DB_01] 缓存命中，跳过下载。"
+          else
+            echo "⚠️ [DB_01] 缓存失效，正在下载初始数据..."
             git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-marketing temp_db_01
             mkdir -p ${{ env.DB_01 }}
             cp -af temp_db_01/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
             rm -rf temp_db_01
           fi
-          # 处理 DB_02
-          if [ -z "$(ls -A ${{ env.DB_02 }} 2>/dev/null)" ]; then
+
+          # 检查 DB_02 (商品)
+          if [ -d "${{ env.DB_02 }}" ] && [ "$(ls -A ${{ env.DB_02 }} 2>/dev/null)" ]; then
+            echo "✅ [DB_02] 缓存命中，跳过下载。"
+          else
+            echo "⚠️ [DB_02] 缓存失效，正在下载初始数据..."
             git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-product temp_db_02
             mkdir -p ${{ env.DB_02 }}
             cp -af temp_db_02/${{ env.DB_02 }}/. ${{ env.DB_02 }}/
@@ -80,7 +87,6 @@ jobs:
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
         run: |
-          # 并行安装系统库与依赖
           sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
           npm ci --prefix node.js --prefer-offline --no-audit &
           npm ci --prefix next.js --prefer-offline --no-audit &
