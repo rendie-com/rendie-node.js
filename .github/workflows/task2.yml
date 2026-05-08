@@ -17,7 +17,6 @@ env:
   NODE_EXPIRES_IN: "1777047860"
   MAX_RUNTIME_MINUTES: 3
   TARGET_DIR: "error/task2"
-  GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "https://www.rendie.com/admin"
