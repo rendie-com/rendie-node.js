@@ -1,4 +1,4 @@
-name: 1.1 Shopee用户相关-4小时 (Cache高速版)
+name: 3.1 SHOPEE-营销中心-1天 (Cache高速版)
 
 on:
   workflow_dispatch: 
@@ -12,8 +12,8 @@ permissions:
 env:   
   TZ: Asia/Shanghai
   NODE_USERNAME: "4hour"
-  NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
-  NODE_REFRESH_TOKEN: "xxx"
+  NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_3 }}
+  NODE_REFRESH_TOKEN: "xxxx"
   NODE_EXPIRES_IN: "1777047860"
   MAX_RUNTIME_MINUTES: 70
   TARGET_DIR: "error/task1"
