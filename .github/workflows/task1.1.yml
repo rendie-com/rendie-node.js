@@ -93,12 +93,12 @@ jobs:
 
           # 4. 启动 Next.js 生产服务
           echo "启动 Next.js 服务..."
-          npm run dev --prefix next.js & 
+          npm run start --prefix next.js & 
           
           sleep 10
           
           cd node.js && npm run start
         env:
-          NEXT_PUBLIC_DEFAULT_DB: "pg02" 
+          NEXT_PUBLIC_DEFAULT_DB: "sqlite" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
