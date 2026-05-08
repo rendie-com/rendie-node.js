@@ -87,12 +87,15 @@ jobs:
 
       - name: 8. 构建并运行生产环境
         run: |                                          
-          if [ -d "db_seed" ]; then
+          if [ -d "db_01" ]; then
             mkdir -p "${{ env.DB_01 }}"
+            cp -af db_01/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
+            echo "已复制${{ env.DB_01 }}初始数据"       
+          fi
+          if [ -d "db_02" ]; then
             mkdir -p "${{ env.DB_02 }}"
-            cp -af db_seed/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
-            cp -af db_seed/${{ env.DB_02 }}/. ${{ env.DB_02 }}/
-            echo "已复制初始数据库仓库"       
+            cp -af db_02/${{ env.DB_02 }}/. ${{ env.DB_02 }}/
+            echo "已复制${{ env.DB_02 }}初始数据库仓库"       
           fi
          
           # 2. 并行安装依赖和系统库
