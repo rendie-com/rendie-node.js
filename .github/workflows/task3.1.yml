@@ -42,6 +42,16 @@ jobs:
           path: next.js
           fetch-depth: 1
 
+      - name: Cache Next.js build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.npm
+            next.js/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('next.js/**/*.{js,jsx,ts,tsx}') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
       - name: 3. 【shopee/营销中心/】数据库还原 (读档)
         uses: actions/cache@v5
         with:
