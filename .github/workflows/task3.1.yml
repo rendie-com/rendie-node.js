@@ -109,3 +109,12 @@ jobs:
           
           sleep 10
           cd node.js && npm run start
+
+      - name: 删除【shopee/商品/】缓存
+        run: |
+          # 1. 获取所有缓存列表
+          # 2. 过滤出以 "shopee-product-" 开头的缓存名称
+          # 3. 逐个删除
+          gh actions-cache list --limit 10 | grep "shopee-product-" | cut -f 1 | xargs -I {} gh actions-cache delete {} --confirm
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
