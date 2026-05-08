@@ -99,6 +99,6 @@ jobs:
           
           cd node.js && npm run start
         env:
-          NEXT_PUBLIC_DEFAULT_DB: "sqlite" 
+          NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
