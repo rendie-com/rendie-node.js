@@ -21,7 +21,7 @@ env:
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "http://localhost:3000/admin"
-  DB_BASE_PATH: "./sqlite3"
+  DB_BASE_PATH: "./sqlite3/shopee/采集箱"
 
 jobs:
   automation_job:
@@ -70,10 +70,9 @@ jobs:
       - name: 6. 构建并运行生产环境
         run: |                                          
           if [ -d "db_seed" ]; then
-              # 确保目标目录存在，避免 cp 报错
-              mkdir -p "${{ env.DB_BASE_PATH }}"              
-              cp -af db_seed/${{ env.DB_BASE_PATH }}/. ${{ env.DB_BASE_PATH }}/
-              echo "首次下载数据并已搬运至目标路径"
+            mkdir -p "${{ env.DB_BASE_PATH }}"
+            cp -af db_seed/${{ env.DB_BASE_PATH }}/. ${{ env.DB_BASE_PATH }}/
+            echo "首次下载数据并已搬运至目标路径"       
           fi
          
           # 2. 并行安装依赖和系统库
@@ -100,6 +99,6 @@ jobs:
           
           cd node.js && npm run start
         env:
-          NEXT_PUBLIC_DEFAULT_DB: "sqlite" 
+          NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
