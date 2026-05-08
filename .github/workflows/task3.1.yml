@@ -1,4 +1,4 @@
-name: 3.1 SHOPEE-营销中心-1天 (Cache高速版)
+name: 3.1 SHOPEE-商品-营销中心-1天 (Cache高速版)
 
 on:
   workflow_dispatch: 
@@ -16,7 +16,7 @@ env:
   NODE_REFRESH_TOKEN: "xxxx"
   NODE_EXPIRES_IN: "1777047860"
   MAX_RUNTIME_MINUTES: 70
-  TARGET_DIR: "error/task1"
+  TARGET_DIR: "error/task3"
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
@@ -42,7 +42,7 @@ jobs:
           path: next.js
           fetch-depth: 1
 
-      - name: 3. 数据库高速缓存还原 (读档)
+      - name: 3. 【shopee/营销中心/】数据库高速缓存还原 (读档)
         uses: actions/cache@v5
         with:
           path: ${{ env.DB_01 }}
@@ -50,7 +50,7 @@ jobs:
           restore-keys: |
             shopee-marketing-
 
-      - name: 4. 数据库高速缓存还原 (读档)
+      - name: 4. 【shopee/商品/】数据库高速缓存还原 (读档)
         uses: actions/cache@v5
         with:
           path: ${{ env.DB_02 }}
