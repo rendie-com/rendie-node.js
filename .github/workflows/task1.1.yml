@@ -92,7 +92,7 @@ jobs:
 
           # 4. 启动 Next.js 生产服务
           echo "启动 Next.js 服务..."
-          npm run start --prefix next.js & 
+          npm run dev --prefix next.js & 
           
           sleep 10
           
