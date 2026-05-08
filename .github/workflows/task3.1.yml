@@ -1,4 +1,4 @@
-name: 3.1 SHOPEE-营销中心-商品-1天
+name: 3.1 SHOPEE-商品-营销中心-1天
 
 on:
   workflow_dispatch: 
@@ -11,68 +11,117 @@ permissions:
 
 env:   
   TZ: Asia/Shanghai
+  NODE_USERNAME: "1day"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_3 }}
+  NODE_REFRESH_TOKEN: "xxxx"
+  NODE_EXPIRES_IN: "1777047860"
+  MAX_RUNTIME_MINUTES: 70
+  TARGET_DIR: "error/task3"
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
-  DB_PATH: "./sqlite3/shopee"
+  GITHUB_OWNER: "rendie-com"
+  GITHUB_REPO: "rendie-node.js-error"
+  TARGET_URL: "http://localhost:3000/admin"
+  DB_01: "./sqlite3/shopee/营销中心"
+  DB_02: "./sqlite3/shopee/商品"
 
 jobs:
   automation_job:
     runs-on: ubuntu-latest
     timeout-minutes: 80 
     steps:
-      - name: 1. 拉取代码 (主程序 & 前端)
-        run: |
-          git clone --depth 1 https://github.com/${{ github.repository }} .
-          git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-next.js next.js
-
-      - name: 2. 数据库高速缓存还原
-        uses: actions/cache@v4
+      - name: 1. 下载主程序代码
+        uses: actions/checkout@v6
         with:
-          path: ${{ env.DB_PATH }}
-          key: shopee-db-${{ github.run_id }}
-          restore-keys: shopee-db-
+          fetch-depth: 1
 
-      - name: 3. (备选) 下载初始数据库
-        # 如果缓存还原后目录下没有 .db 文件，则从远程仓库拉取备份
-        if: hashFiles('sqlite3/**/*.db') == ''
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-marketing db_m
-          git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-product db_p
-          mkdir -p ${{ env.DB_PATH }}/营销中心 ${{ env.DB_PATH }}/商品
-          cp -af db_m/sqlite3/shopee/营销中心/. ${{ env.DB_PATH }}/营销中心/
-          cp -af db_p/sqlite3/shopee/商品/. ${{ env.DB_PATH }}/商品/
+      - name: 2. 下载核心前端代码
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-next.js
+          token: ${{ secrets.MY_PAT }}
+          path: next.js
+          fetch-depth: 1
 
-      - name: 4. 环境准备
-        uses: actions/setup-node@v4
+      - name: 3. 【shopee/营销中心/】数据库高速缓存还原 (读档)
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.DB_01 }}
+          key: shopee-marketing-${{ github.run_id }}
+          restore-keys: |
+            shopee-marketing-
+
+      - name: 4. 【shopee/商品/】数据库高速缓存还原 (读档)
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.DB_02 }}
+          key: shopee-product-${{ github.run_id }}
+          restore-keys: |
+            shopee-product-
+
+      - name: 5. (备选) 下载初始数据【shopee/营销中心/】
+        if: hashFiles(format('{0}/**/*.db', env.DB_01)) == ''
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-sqlite3-shopee-marketing
+          token: ${{ secrets.MY_PAT }}
+          path: db_01
+          fetch-depth: 1
+
+      - name: 6. (备选) 下载初始数据【shopee/商品/】
+        if: hashFiles(format('{0}/**/*.db', env.DB_02)) == ''
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-sqlite3-shopee-product
+          token: ${{ secrets.MY_PAT }}
+          path: db_02
+          fetch-depth: 1
+
+      - name: 7. 环境准备与缓存配置
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: 'npm'
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: |
+            node.js/package-lock.json
+            next.js/package-lock.json
 
-      - name: 5. 构建并运行生产环境
+      - name: 8. 构建并运行生产环境
+        run: |                                          
+          if [ -d "db_01" ]; then
+            mkdir -p "${{ env.DB_01 }}"
+            cp -af db_01/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
+            echo "已复制【${{ env.DB_01 }}】数据"       
+          fi
+          if [ -d "db_02" ]; then
+            mkdir -p "${{ env.DB_02 }}"
+            cp -af db_02/${{ env.DB_02 }}/. ${{ env.DB_02 }}/
+            echo "已复制【${{ env.DB_02 }}】数据库"       
+          fi
+           
+          # 2. 并行安装依赖和系统库
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
+          PID_APT=$!
+
+          npm ci --prefix node.js --prefer-offline --no-audit --progress=false &
+          PID_MAIN=$!
+          
+          npm ci --prefix next.js --prefer-offline --no-audit --progress=false &
+          PID_NEXT=$!
+          
+          wait $PID_APT $PID_MAIN $PID_NEXT
+
+          # 3. 编译 Next.js
+          echo "正在编译 Next.js..."
+          npm run build --prefix next.js
+
+          # 4. 启动 Next.js 生产服务
+          echo "启动 Next.js 服务..."
+          npm run start --prefix next.js & 
+          
+          sleep 10
+          
+          cd node.js && npm run start
         env:
-          NODE_USERNAME: "1day"
-          MAX_RUNTIME_MINUTES: 70
-          TARGET_DIR: "error/task3"
-          GITHUB_OWNER: "rendie-com"
-          GITHUB_REPO: "rendie-node.js-error"
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
-        run: |
-          # 1. 并行安装系统库与依赖
-          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
-          npm ci --prefix node.js --prefer-offline --no-audit &
-          npm ci --prefix next.js --prefer-offline --no-audit &
-          wait
-          
-          # 2. 编译并启动服务
-          echo "正在构建并启动服务..."
-          npm run build --prefix next.js
-          npm run start --prefix next.js & 
-          
-          # 等待前端就绪
-          sleep 10
-          
-          # 启动主程序
-          cd node.js && npm run start
