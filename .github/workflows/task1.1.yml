@@ -1,9 +1,9 @@
-name: 1.1 Shopee用户相关-4小时
+name: 1.2 Shopee用户相关-4小时 (Cache高速版)
 
 on:
   workflow_dispatch: 
-  # schedule:
-  #   - cron: "0 */4 * * *"
+  schedule:
+    - cron: "0 */4 * * *"
 
 permissions:
   contents: write
@@ -15,24 +15,33 @@ env:
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
   NODE_REFRESH_TOKEN: ${{ secrets.NODE_REFRESH_TOKEN_1 }}
   NODE_EXPIRES_IN: "1777047860"
-  MAX_RUNTIME_MINUTES: 60
+  MAX_RUNTIME_MINUTES: 70
   TARGET_DIR: "error/task1"
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "http://localhost:3000/admin"
+  DB_BASE_PATH: "./sqlite3/shopee/采集箱"
 
 jobs:
   automation_job:
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 80 
     steps:
       - name: 1. 下载主程序代码
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
-      - name: 2. 下载核心前端代码
+      - name: 2. 数据库高速缓存还原 (读档)
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.DB_BASE_PATH }}
+          key: shopee-crawler-${{ github.run_id }}
+          restore-keys: |
+            shopee-crawler-
+
+      - name: 3. 下载核心前端代码
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-next.js
@@ -40,15 +49,16 @@ jobs:
           path: next.js
           fetch-depth: 1
 
-      - name: 3. 下载crawler数据库
+      - name: 4. (备选) 下载初始数据库仓库
+        if: hashFiles(format('{0}/**/*.db', env.DB_BASE_PATH)) == ''
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-shopee-crawler
           token: ${{ secrets.MY_PAT }}
-          path: db02
+          path: db_seed
           fetch-depth: 1
 
-      - name: 4. 环境准备与缓存配置
+      - name: 5. 环境准备与缓存配置
         uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -57,12 +67,14 @@ jobs:
             node.js/package-lock.json
             next.js/package-lock.json
 
-      - name: 5. 构建并运行生产环境
-        run: |
-          # 处理数据库文件：从 db02 移出到根目录
-          [ -d "./db02" ] && cp -rn ./db02/* . && rm -rf db02
-
-          # 1. 并行安装依赖和系统库
+      - name: 6. 构建并运行生产环境
+        run: |                                          
+          if [ -d "db_seed" ]; then
+            cp -af db_seed/${{ env.DB_BASE_PATH }}/. ${{ env.DB_BASE_PATH }}/
+            echo "首次下载数据"          
+          fi
+         
+          # 2. 并行安装依赖和系统库
           sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
           PID_APT=$!
 
@@ -74,24 +86,23 @@ jobs:
           
           wait $PID_APT $PID_MAIN $PID_NEXT
 
-          # 2. 编译 Next.js
+          # 3. 编译 Next.js
           echo "正在编译 Next.js..."
           npm run build --prefix next.js
 
-          # 3. 启动 Next.js 生产服务
+          # 4. 启动 Next.js 生产服务
           echo "启动 Next.js 服务..."
           npm run start --prefix next.js & 
           
           sleep 10
           
-          # 4. 运行主程序（这步会更新根目录下的数据库文件）
           cd node.js && npm run start
         env:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
 
-      - name: 6. 极速推送数据库
+      - name: 推送数据库（备份）
         if: success()
         run: |
           # 1. 浅克隆（只拉取最后一层，极快）
@@ -101,7 +112,7 @@ jobs:
           mkdir -p tmp_sync/sqlite3/shopee/采集箱/
           
           # 3. 同步目录（使用 -a 保持属性，不输出冗余信息）
-          cp -af ./sqlite3/shopee/采集箱/粉丝 tmp_sync/sqlite3/shopee/采集箱/
+          cp -af ./sqlite3/shopee/采集箱 tmp_sync/sqlite3/shopee/
           
           cd tmp_sync
           git config --local user.email "action@github.com"
@@ -117,7 +128,7 @@ jobs:
             echo "无变化，跳过。"
           fi
 
-      - name: 7. 任务清理：删除 3 天前的运行记录
+      - name: 7. 任务清理：删除旧运行记录
         if: always()
         run: |
           DEL_DATE=$(date -d '3 days ago' +%Y-%m-%d)
