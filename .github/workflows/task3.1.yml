@@ -11,6 +11,8 @@ permissions:
 
 env:   
   TZ: Asia/Shanghai
+  # 强制所有 Action 使用 Node 24 运行，消除 Deprecation 警告
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   NODE_USERNAME: "1day"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_3 }}
   NODE_REFRESH_TOKEN: "xxxx"
@@ -29,10 +31,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 80 
     steps:
-      - name: 1. 下载主程序与前端代码
-        run: |
-          git clone --depth 1 https://github.com/${{ github.repository }} .
-          git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-next.js next.js
+      - name: 1. 下载主程序代码
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: 2. 下载核心前端代码
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-next.js
+          token: ${{ secrets.MY_PAT }}
+          path: next.js
+          fetch-depth: 1
 
       - name: 3. 【shopee/营销中心/】数据库还原 (读档)
         uses: actions/cache@v5
@@ -74,12 +84,14 @@ jobs:
             rm -rf temp_db_02
           fi
 
-      - name: 7. 环境准备
+      - name: 7. 环境准备 (Node.js 24)
         uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: 'npm'
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: |
+            node.js/package-lock.json
+            next.js/package-lock.json
 
       - name: 8. 构建并运行生产环境
         env:
@@ -87,11 +99,13 @@ jobs:
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
         run: |
+          # 并行安装系统库与依赖
           sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
           npm ci --prefix node.js --prefer-offline --no-audit &
           npm ci --prefix next.js --prefer-offline --no-audit &
           wait
           
+          # 构建与启动
           npm run build --prefix next.js
           npm run start --prefix next.js & 
           
