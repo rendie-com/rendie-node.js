@@ -7,10 +7,9 @@ on:
 permissions:
   contents: write
   actions: write
-
 env:   
-  DB_BASE_PATH: "./sqlite3/shopee/采集箱"
-
+  DB_01: "./sqlite3/shopee/采集箱"
+  DB_02: "./sqlite3/shopee/聊聊"
 jobs:
   automation_job:
     runs-on: ubuntu-latest
@@ -21,43 +20,59 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 2. 数据库高速缓存还原 (读档)
-        uses: actions/cache/restore@v4  
+      - name: 3. 数据库高速缓存还原 (DB_01)
+        uses: actions/cache@v4
         with:
-          path: ${{ env.DB_BASE_PATH }}
-          key: shopee-crawler-not-exists-${{ github.run_id }}
+          path: ${{ env.DB_01 }}
+          key: shopee-crawler-${{ github.run_id }}
           restore-keys: |
             shopee-crawler-
 
-      - name: 3. 推送数据库（备份）
-        run: |
-          # 1. 浅克隆（只拉取最后一层，极快）
-          git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-crawler.git tmp_sync
-          
-          # 2. 确保目标父目录存在
-          mkdir -p tmp_sync/sqlite3/shopee/采集箱/
-          
-          # 3. 同步目录（使用 -a 保持属性，不输出冗余信息）
-          cp -af ./sqlite3/shopee/采集箱 tmp_sync/sqlite3/shopee/
-          
-          cd tmp_sync
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          
-          # 4. 快速检查并推送
-          if [ -n "$(git status --porcelain)" ]; then
-            git add .
-            # 使用 --no-verify 跳过可能存在的 pre-commit 检查（如果仓库里有的话）
-            git commit -m "fast-sync: $(date '+%m%d-%H%M')"
-            git push origin main
-          else
-            echo "无变化，跳过。"
-          fi
+      - name: 4. 数据库高速缓存还原 (DB_02)
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.DB_02 }}
+          key: shopee-chat-${{ github.run_id }}
+          restore-keys: |
+            shopee-chat-
 
-      - name: 4. 任务清理：删除旧运行记录
-        if: always()
+      - name: 4. 推送数据库（备份至远程仓库）
         run: |
-          DEL_DATE=$(date -d '3 days ago' +%Y-%m-%d)
-          gh run list --status completed --created "<$DEL_DATE" --limit 100 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 定义需要同步的映射 "本地目录|远程仓库名"
+          SYNC_LIST=(
+            "${{ env.DB_01 }}|rendie-sqlite3-shopee-crawler"
+            "${{ env.DB_02 }}|rendie-sqlite3-shopee-chat"
+          )
+
+          for item in "${SYNC_LIST[@]}"; do
+            LOCAL_PATH="${item%%|*}"
+            REPO_NAME="${item##*|}"
+            
+            echo "--- 开始备份: $LOCAL_PATH -> $REPO_NAME ---"
+            
+            if [ ! -d "$LOCAL_PATH" ] || [ -z "$(ls -A $LOCAL_PATH 2>/dev/null)" ]; then
+              echo "⚠️ 路径 $LOCAL_PATH 为空，跳过。"
+              continue
+            fi
+
+            # 修正点：克隆到以仓库名命名的目录，避免第二次循环冲突
+            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/${REPO_NAME}.git "tmp_$REPO_NAME"
+            
+            mkdir -p "tmp_$REPO_NAME/$LOCAL_PATH"
+            cp -af "$LOCAL_PATH/." "tmp_$REPO_NAME/$LOCAL_PATH/"
+            
+            cd "tmp_$REPO_NAME"
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            
+            if [ -n "$(git status --porcelain)" ]; then
+              git add .
+              git commit -m "backup-sync: $(date '+%Y%m%d-%H%M')"
+              git push origin main
+              echo "✅ 推送成功。"
+            else
+              echo "ℹ️ 数据无变化，跳过推送。"
+            fi
+            
+            cd ..
+          done
