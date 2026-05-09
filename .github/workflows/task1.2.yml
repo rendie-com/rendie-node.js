@@ -4,12 +4,15 @@ on:
   workflow_dispatch: 
   schedule:
     - cron: "0 0 * * *"
+
 permissions:
   contents: write
   actions: write
+
 env:   
   DB_01: "./sqlite3/shopee/采集箱"
   DB_02: "./sqlite3/shopee/聊聊"
+
 jobs:
   automation_job:
     runs-on: ubuntu-latest
@@ -20,16 +23,16 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: 3. 数据库高速缓存还原 (DB_01)
-        uses: actions/cache@v4
+      - name: 2. 数据库高速缓存还原 (DB_01)
+        uses: actions/cache@v5
         with:
           path: ${{ env.DB_01 }}
           key: shopee-crawler-${{ github.run_id }}
           restore-keys: |
             shopee-crawler-
 
-      - name: 4. 数据库高速缓存还原 (DB_02)
-        uses: actions/cache@v4
+      - name: 3. 数据库高速缓存还原 (DB_02)
+        uses: actions/cache@v5
         with:
           path: ${{ env.DB_02 }}
           key: shopee-chat-${{ github.run_id }}
@@ -38,7 +41,12 @@ jobs:
 
       - name: 4. 推送数据库（备份至远程仓库）
         run: |
-          # 定义需要同步的映射 "本地目录|远程仓库名"
+          # 必须添加安全目录授权，否则跨仓库操作会报错
+          git config --global --add safe.directory "*"
+          
+          # 获取当前工作根目录的绝对路径
+          ROOT_DIR=$(pwd)
+          
           SYNC_LIST=(
             "${{ env.DB_01 }}|rendie-sqlite3-shopee-crawler"
             "${{ env.DB_02 }}|rendie-sqlite3-shopee-chat"
@@ -48,31 +56,40 @@ jobs:
             LOCAL_PATH="${item%%|*}"
             REPO_NAME="${item##*|}"
             
-            echo "--- 开始备份: $LOCAL_PATH -> $REPO_NAME ---"
+            echo "▶--- 开始备份: $LOCAL_PATH -> $REPO_NAME ---"
             
-            if [ ! -d "$LOCAL_PATH" ] || [ -z "$(ls -A $LOCAL_PATH 2>/dev/null)" ]; then
-              echo "⚠️ 路径 $LOCAL_PATH 为空，跳过。"
+            # 检查本地数据是否存在
+            if [ ! -d "$ROOT_DIR/$LOCAL_PATH" ] || [ -z "$(ls -A $ROOT_DIR/$LOCAL_PATH 2>/dev/null)" ]; then
+              echo "⚠️ 路径 $LOCAL_PATH 为空或不存在，跳过。"
               continue
             fi
 
-            # 修正点：克隆到以仓库名命名的目录，避免第二次循环冲突
-            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/${REPO_NAME}.git "tmp_$REPO_NAME"
+            # 每次循环进入独立的临时目录，彻底杜绝路径干扰
+            TEMP_DIR="tmp_repo_$REPO_NAME"
+            rm -rf "$TEMP_DIR"
             
-            mkdir -p "tmp_$REPO_NAME/$LOCAL_PATH"
-            cp -af "$LOCAL_PATH/." "tmp_$REPO_NAME/$LOCAL_PATH/"
+            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/${REPO_NAME}.git "$TEMP_DIR"
             
-            cd "tmp_$REPO_NAME"
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
+            # 确保目标结构并同步文件
+            mkdir -p "$TEMP_DIR/$LOCAL_PATH"
+            cp -af "$ROOT_DIR/$LOCAL_PATH/." "$TEMP_DIR/$LOCAL_PATH/"
             
-            if [ -n "$(git status --porcelain)" ]; then
-              git add .
-              git commit -m "backup-sync: $(date '+%Y%m%d-%H%M')"
-              git push origin main
-              echo "✅ 推送成功。"
-            else
-              echo "ℹ️ 数据无变化，跳过推送。"
-            fi
+            # 使用子 Shell 模式 ( )，执行完会自动回到当前目录，无需 cd ..
+            (
+              cd "$TEMP_DIR"
+              git config user.email "action@github.com"
+              git config user.name "GitHub Action"
+              
+              if [ -n "$(git status --porcelain)" ]; then
+                git add .
+                git commit -m "backup-sync: $(date '+%Y%m%d-%H%M')"
+                git push origin main
+                echo "✅ $REPO_NAME 推送成功。"
+              else
+                echo "ℹ️ $REPO_NAME 数据无变化，跳过。"
+              fi
+            )
             
-            cd ..
+            # 清理本次循环的残留
+            rm -rf "$TEMP_DIR"
           done
