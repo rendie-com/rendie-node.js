@@ -92,3 +92,10 @@ jobs:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
+          
+      - name: 8. 清理旧缓存
+        if: always()
+        run: |
+          gh cache list --limit 100 | grep -E "shopee-crawler-|shopee-chat-" | cut -f 1 | xargs -I {} gh cache delete {} || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

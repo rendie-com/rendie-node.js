@@ -87,10 +87,3 @@ jobs:
           gh run list --status completed --created "<$DEL_DATE" --limit 100 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 6. 清理旧缓存
-        if: always()
-        run: |
-          gh cache list --limit 100 | grep -E "shopee-crawler-|shopee-chat-" | cut -f 1 | xargs -I {} gh cache delete {} || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
