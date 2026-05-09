@@ -69,7 +69,7 @@ jobs:
           restore-keys: |
             shopee-product-
 
-      - name: 5/6. 数据库状态检查与同步
+      - name: 5. 数据库状态检查与同步
         run: |
           # 检查 DB_01 (营销中心)
           if [ -d "${{ env.DB_01 }}" ] && [ "$(ls -A ${{ env.DB_01 }} 2>/dev/null)" ]; then
@@ -93,7 +93,7 @@ jobs:
             rm -rf temp_db_02
           fi
 
-      - name: 7. 环境准备 (Node.js 24)
+      - name: 6. 环境准备 (Node.js 24)
         uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -102,7 +102,7 @@ jobs:
             node.js/package-lock.json
             next.js/package-lock.json
 
-      - name: 8. 构建并运行生产环境
+      - name: 7. 构建并运行生产环境
         env:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
@@ -121,7 +121,7 @@ jobs:
           sleep 10
           cd node.js && npm run start
 
-      - name: 9. 删除【shopee/营销中心/】【shopee/商品/】缓存
+      - name: 8. 删除【shopee/营销中心/】【shopee/商品/】缓存
         run: |
           gh cache list --limit 100 | grep -E "shopee-product-|shopee-marketing-" | cut -f 1 | xargs -I {} gh cache delete {}
         env:

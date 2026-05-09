@@ -58,15 +58,28 @@ jobs:
           restore-keys: |
             shopee-chat-
 
-      - name: 5. (备选) 初始数据库下载
+      - name: 5. 初始数据库下载与状态检查
         run: |
-          if [ ! -d "${{ env.DB_01 }}" ] || [ -z "$(ls -A ${{ env.DB_01 }})" ]; then
-            git clone --depth 1 https://${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-crawler.git temp_db01
-            mkdir -p "${{ env.DB_01 }}" && cp -af temp_db01/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
+          # 检查 DB_01 (Crawler 爬虫数据库)
+          if [ -d "${{ env.DB_01 }}" ] && [ "$(ls -A ${{ env.DB_01 }} 2>/dev/null)" ]; then
+            echo "✅ [DB_01] 缓存命中，跳过下载。"
+          else
+            echo "⚠️ [DB_01] 缓存失效，正在下载初始数据..."
+            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-crawler.git temp_db01
+            mkdir -p "${{ env.DB_01 }}"
+            cp -af temp_db01/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
+            rm -rf temp_db01
           fi
-          if [ ! -d "${{ env.DB_02 }}" ] || [ -z "$(ls -A ${{ env.DB_02 }})" ]; then
-            git clone --depth 1 https://${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-chat.git temp_db02
-            mkdir -p "${{ env.DB_02 }}" && cp -af temp_db02/${{ env.DB_02 }}/. ${{ env.DB_02 }}/
+
+          # 检查 DB_02 (Chat 聊天数据库)
+          if [ -d "${{ env.DB_02 }}" ] && [ "$(ls -A ${{ env.DB_02 }} 2>/dev/null)" ]; then
+            echo "✅ [DB_02] 缓存命中，跳过下载。"
+          else
+            echo "⚠️ [DB_02] 缓存失效，正在下载初始数据..."
+            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-chat.git temp_db02
+            mkdir -p "${{ env.DB_02 }}"
+            cp -af temp_db02/${{ env.DB_02 }}/. ${{ env.DB_02 }}/
+            rm -rf temp_db02
           fi
 
       - name: 6. 环境准备
