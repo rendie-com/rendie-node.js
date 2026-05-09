@@ -21,7 +21,8 @@ env:
   GITHUB_OWNER: "rendie-com"
   GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "http://localhost:3000/admin"
-  DB_BASE_PATH: "./sqlite3/shopee/采集箱"
+  DB_01: "./sqlite3/shopee/采集箱"
+  DB_02: "./sqlite3/shopee/聊聊"
 
 jobs:
   automation_job:
@@ -36,10 +37,18 @@ jobs:
       - name: 2. 数据库高速缓存还原 (读档)
         uses: actions/cache@v5
         with:
-          path: ${{ env.DB_BASE_PATH }}
+          path: ${{ env.DB_01 }}
           key: shopee-crawler-${{ github.run_id }}
           restore-keys: |
             shopee-crawler-
+
+      - name: 2. 数据库高速缓存还原 (读档)
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.DB_02 }}
+          key: shopee-chat-${{ github.run_id }}
+          restore-keys: |
+            shopee-chat-
 
       - name: 3. 下载核心前端代码
         uses: actions/checkout@v6
@@ -49,13 +58,22 @@ jobs:
           path: next.js
           fetch-depth: 1
 
-      - name: 4. (备选) 下载初始数据库仓库
-        if: hashFiles(format('{0}/**/*.db', env.DB_BASE_PATH)) == ''
+      - name: 4. (备选) 下载【shopee/采集箱】数据
+        if: hashFiles(format('{0}/**/*.db', env.DB_01)) == ''
         uses: actions/checkout@v6
         with:
           repository: rendie-com/rendie-sqlite3-shopee-crawler
           token: ${{ secrets.MY_PAT }}
-          path: db_seed
+          path: DB_01
+          fetch-depth: 1
+
+      - name: 5. (备选) 下载【shopee/聊聊】数据
+        if: hashFiles(format('{0}/**/*.db', env.DB_02)) == ''
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-sqlite3-shopee-chat
+          token: ${{ secrets.MY_PAT }}
+          path: DB_02
           fetch-depth: 1
           
       - name: Cache Next.js build
@@ -79,9 +97,14 @@ jobs:
 
       - name: 6. 构建并运行生产环境
         run: |                                          
-          if [ -d "db_seed" ]; then
-            mkdir -p "${{ env.DB_BASE_PATH }}"
-            cp -af db_seed/${{ env.DB_BASE_PATH }}/. ${{ env.DB_BASE_PATH }}/
+          if [ -d "DB_01" ]; then
+            mkdir -p "${{ env.DB_01 }}"
+            cp -af DB_01/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
+            echo "已复制初始数据库仓库"       
+          fi
+          if [ -d "DB_02" ]; then
+            mkdir -p "${{ env.DB_02 }}"
+            cp -af DB_02/${{ env.DB_02 }}/. ${{ env.DB_02 }}/
             echo "已复制初始数据库仓库"       
           fi
          
@@ -104,8 +127,6 @@ jobs:
           # 4. 启动 Next.js 生产服务
           echo "启动 Next.js 服务..."
           npm run start --prefix next.js & 
-          
-          sleep 10
           
           cd node.js && npm run start
         env:
