@@ -110,9 +110,9 @@ jobs:
         run: |
           # 并行安装系统库与依赖
           # sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
-          # npm ci --prefix node.js --prefer-offline --no-audit &
-          # npm ci --prefix next.js --prefer-offline --no-audit &
-          # wait
+          npm ci --prefix node.js --prefer-offline --no-audit &
+          npm ci --prefix next.js --prefer-offline --no-audit &
+          wait
           
           # 构建与启动
           npm run build --prefix next.js
