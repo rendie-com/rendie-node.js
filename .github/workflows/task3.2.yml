@@ -10,33 +10,32 @@ permissions:
   actions: write
 
 env:   
-  TZ: Asia/Shanghai
   DB_01: "./sqlite3/shopee/营销中心"
   DB_02: "./sqlite3/shopee/商品"
 
 jobs:
   automation_job:
     runs-on: ubuntu-latest
-    timeout-minutes: 80 
+    timeout-minutes: 10 
     steps:
       - name: 1. 下载主程序代码
         uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
-      - name: 2. 【shopee/营销中心/】数据库还原 (读档)
-        uses: actions/cache@v5
+      - name: 2. 【shopee/营销中心/】数据库还原 (只读模式)
+        uses: actions/cache/restore@v4  # 注意这里改成了 cache/restore
         with:
           path: ${{ env.DB_01 }}
-          key: shopee-marketing-${{ github.run_id }}
+          key: shopee-marketing-not-exists-${{ github.run_id }} # 故意给一个不存在的key
           restore-keys: |
             shopee-marketing-
 
-      - name: 3. 【shopee/商品/】数据库还原 (读档)
-        uses: actions/cache@v5
+      - name: 3. 【shopee/商品/】数据库还原 (只读模式)
+        uses: actions/cache/restore@v4  # 注意这里改成了 cache/restore
         with:
           path: ${{ env.DB_02 }}
-          key: shopee-product-${{ github.run_id }}
+          key: shopee-product-not-exists-${{ github.run_id }}
           restore-keys: |
             shopee-product-
 
