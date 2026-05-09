@@ -24,18 +24,18 @@ jobs:
           fetch-depth: 1
 
       - name: 2. 数据库高速缓存还原 (DB_01)
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.DB_01 }}
-          key: shopee-crawler-${{ github.run_id }}
+          key: shopee-crawler-not-exists-${{ github.run_id }}
           restore-keys: |
             shopee-crawler-
 
       - name: 3. 数据库高速缓存还原 (DB_02)
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.DB_02 }}
-          key: shopee-chat-${{ github.run_id }}
+          key: shopee-chat-not-exists-${{ github.run_id }}
           restore-keys: |
             shopee-chat-
 
