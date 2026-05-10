@@ -81,10 +81,11 @@ jobs:
             cd ..
           done
 
-      - name: 5. 任务清理：删除旧运行记录
+      - name: 5. 任务清理：保留最新50条并删除余下旧记录
         if: always()
         run: |
-          DEL_DATE=$(date -d '3 days ago' +%Y-%m-%d)
-          gh run list --status completed --created "<$DEL_DATE" --limit 100 --json databaseId --jq '.[].databaseId' | xargs -I {} gh run delete {} &
+          gh run list --status completed --limit 500 --json databaseId --jq '.[].databaseId' \
+            | tail -n +51 \
+            | xargs -I {} gh run delete {}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
