@@ -49,7 +49,8 @@ export const formatElapsed = (ms) => {
 };
 
 export async function uploadToGithub(localPath, fileName) {
-  const { GITHUB_TOKEN: auth, "rendie-com": owner, "rendie-node.js-error": repo, TARGET_DIR: dir } = process.env;
+  const { GITHUB_TOKEN: auth, TARGET_DIR: dir } = process.env;
+  const owner = "rendie-com", repo = "rendie-node.js-error"
   if (!auth || auth.includes('***')) return;
   if (!owner || !repo) return;
 
@@ -71,8 +72,8 @@ export async function uploadToGithub(localPath, fileName) {
 export function checkProjectEnv(env = process.env) {
   console.log(`\n--- 🚀 Rendie 项目变量检查 ---`);
   const keys = [
-    'NODE_USERNAME', 'NODE_ACCESS_TOKEN', 
-    'TARGET_URL','TEMPLATE', 'MAX_RUNTIME_MINUTES', 'TARGET_DIR',
+    'NODE_USERNAME', 'NODE_ACCESS_TOKEN',
+    'TARGET_URL', 'TEMPLATE', 'MAX_RUNTIME_MINUTES', 'TARGET_DIR',
     'GITHUB_TOKEN'
   ];
 
