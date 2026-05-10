@@ -1,4 +1,4 @@
-name: 3.1 1688-采集箱-4小时 (Cache高速版)
+name: 4.1 1688-采集箱-4小时 (Cache高速版)
 
 on:
   workflow_dispatch: 
