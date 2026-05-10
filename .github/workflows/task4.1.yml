@@ -1,0 +1,108 @@
+name: 3.1 1688-采集箱-4小时 (Cache高速版)
+
+on:
+  workflow_dispatch: 
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: write
+  actions: write
+
+env:   
+  TZ: Asia/Shanghai
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  NODE_USERNAME: "1688"
+  NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_4 }}
+  NODE_REFRESH_TOKEN: "xxxx"
+  NODE_EXPIRES_IN: "1777047860"
+  MAX_RUNTIME_MINUTES: 70
+  TARGET_DIR: "error/task4"
+  GITHUB_TOKEN: ${{ secrets.MY_PAT }}
+  GITHUB_OWNER: "rendie-com"
+  GITHUB_REPO: "rendie-node.js-error"
+  TARGET_URL: "http://localhost:3000/admin"
+  DB_01: "./sqlite3/_1688/采集箱"
+
+jobs:
+  automation_job:
+    runs-on: ubuntu-latest
+    timeout-minutes: 80 
+    steps:
+      - name: 1. 下载主程序代码
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: 2. 下载核心前端代码
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-next.js
+          token: ${{ secrets.MY_PAT }}
+          path: next.js
+          fetch-depth: 1
+
+      - name: Cache Next.js build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.npm
+            next.js/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('next.js/**/*.{js,jsx,ts,tsx}') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: 3. 【shopee/营销中心/】数据库还原 (读档)
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.DB_01 }}
+          key: 1688-crawler-${{ github.run_id }}
+          restore-keys: |
+            1688-crawler-
+
+      - name: 5. 数据库状态检查与同步
+        run: |
+          # 检查 DB_01 (营销中心)
+          if [ -d "${{ env.DB_01 }}" ] && [ "$(ls -A ${{ env.DB_01 }} 2>/dev/null)" ]; then
+            echo "✅ [DB_01] 缓存命中，跳过下载。"
+          else
+            echo "⚠️ [DB_01] 缓存失效，正在下载初始数据..."
+            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-1688-crawler temp_db_01
+            mkdir -p ${{ env.DB_01 }}
+            cp -af temp_db_01/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
+            rm -rf temp_db_01
+          fi
+
+      - name: 6. 环境准备 (Node.js 24)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+          cache-dependency-path: |
+            node.js/package-lock.json
+            next.js/package-lock.json
+
+      - name: 7. 构建并运行生产环境
+        env:
+          NEXT_PUBLIC_DEFAULT_DB: "pg02" 
+          NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
+          NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
+        run: |
+          # 并行安装系统库与依赖
+          # sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ttf-wqy-zenhei libgbm-dev -qq &
+          npm ci --prefix node.js --prefer-offline --no-audit &
+          npm ci --prefix next.js --prefer-offline --no-audit &
+          wait
+          
+          # 构建与启动
+          npm run build --prefix next.js
+          npm run start --prefix next.js & 
+          
+          sleep 10
+          cd node.js && npm run start
+
+      - name: 8. 删除【_1688/采集箱/】缓存
+        run: |
+          gh cache list --limit 100 | grep -E "1688-crawler-" | cut -f 1 | xargs -I {} gh cache delete {}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
