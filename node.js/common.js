@@ -29,42 +29,53 @@ export const CONFIG = {
 };
 
 const GOTO_TIMEOUT_MS = 30_000;
+// 错误类型中文映射
+const ERROR_TYPE_CN = {
+  'TimeoutError': '请求超时',
+  'NavigationError': '导航失败',
+  'TargetClosedError': '浏览器关闭',
+  'EvaluationError': '脚本执行错误'
+};
 
 /**
  * 🛠 核心：统一报错处理、截图上传并关闭
  */
 async function handleFatalError(type) {
-  // 如果正在关闭或正在处理错误，则跳过，避免死循环或重复上传
   if (isHandlingError || isShuttingDown) return;
   isHandlingError = true;
 
-  console.log(`\n🚨 [致命异常] 类型: ${type}`);
+  // 1. 转换中文类型名
+  const cnType = ERROR_TYPE_CN[type] || '未知错误';
+
+  console.log(`\n🚨 [致命异常] 类型: ${cnType} (${type})`);
 
   try {
-    const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
+    // 2. 构造文件名：时间戳放在最前面确保排序，中文放在中间一眼识别
+    const timestamp = getReadableTimestamp();
+    const name = `${timestamp}_【${cnType}】_${Date.now().toString().slice(-3)}.png`;
     const imgPath = path.join(CONFIG.errorDir, name);
 
     if (!fs.existsSync(CONFIG.errorDir)) {
       fs.mkdirSync(CONFIG.errorDir, { recursive: true });
     }
 
-    // 等待 1s 确保页面渲染了最新的错误 UI
     await delay(1000);
 
     if (page && !page.isClosed()) {
-      console.log(`📸 正在截取错误页面...`);
-      await page.screenshot({ path: imgPath }).catch(() => { });
-      console.log(`☁️ 正在上传至 GitHub: ${name}`);
-      await uploadToGithub(imgPath, name).catch((e) => console.error('GitHub 上传失败:', e.message));
+      console.log(`📸 正在截取错误页面: ${name}`);
+      await page.screenshot({ path: imgPath, fullPage: true }).catch(() => { });
+
+      if (isCI) {
+        console.log(`☁️ 正在上传至 GitHub...`);
+        await uploadToGithub(imgPath, name).catch((e) => console.error('GitHub 上传失败:', e.message));
+      }
     }
   } catch (e) {
     console.error('处理报错截图时发生异常:', e.message);
   } finally {
-    console.log(`🛑 正在强制关闭任务...`);
     await shutdown();
   }
 }
-
 async function ensureBrowser() {
   if (isBrowserConnected(browser)) return browser;
 

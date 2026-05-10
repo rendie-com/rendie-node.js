@@ -35,11 +35,14 @@ export function registerProcessGuards({ shutdown }) {
 // 文件名：04月25日_11时30分
 export const getReadableTimestamp = () => {
   const now = new Date();
-  const m = (now.getMonth() + 1).toString().padStart(2, '0');
-  const d = now.getDate().toString().padStart(2, '0');
-  const h = now.getHours().toString().padStart(2, '0');
-  const min = now.getMinutes().toString().padStart(2, '0');
-  return `${m}月${d}日_${h}时${min}分`;
+  const Y = now.getFullYear();
+  const M = String(now.getMonth() + 1).padStart(2, '0');
+  const D = String(now.getDate()).padStart(2, '0');
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  // 返回格式：2023-10-27_15-30-05
+  return `${Y}-${M}-${D}_${h}-${m}-${s}`;
 };
 
 // 计时显示：超过60秒显示分，否则秒
