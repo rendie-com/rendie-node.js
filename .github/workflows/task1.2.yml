@@ -1,9 +1,9 @@
-name: 1.2 Shopee用户相关-1天 (备份)
+name: 1.2 Shopee用户相关-3天 (备份)
 
 on:
   workflow_dispatch: 
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 */3 * *"
 
 permissions:
   contents: write

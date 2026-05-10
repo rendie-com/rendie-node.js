@@ -14,13 +14,10 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   NODE_USERNAME: "1688"
   NODE_ACCESS_TOKEN:  ${{ secrets.NODE_ACCESS_TOKEN_4 }}
-  NODE_REFRESH_TOKEN: "xxxx"
-  NODE_EXPIRES_IN: "1777047860"
   MAX_RUNTIME_MINUTES: 70
   TARGET_DIR: "error/task4"
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
-  GITHUB_OWNER: "rendie-com"
-  GITHUB_REPO: "rendie-node.js-error"
+  TEMPLATE: "1688/定时任务/index.js&jsFile=02"
   TARGET_URL: "http://localhost:3000/admin"
   DB_01: "./sqlite3/_1688/采集箱"
 

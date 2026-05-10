@@ -1,9 +1,9 @@
-name: 3.2 SHOPEE-商品-营销中心-1天(备份)
+name: 3.2 SHOPEE-商品-营销中心-3天(备份)
 
 on:
   workflow_dispatch: 
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 */3 * *"
 
 permissions:
   contents: write

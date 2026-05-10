@@ -2,14 +2,14 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import path from 'path';
 import fs from 'fs';
-import { 
-  delay, 
-  getReadableTimestamp, 
-  uploadToGithub, 
-  formatElapsed, 
-  checkProjectEnv, 
-  isBrowserConnected, 
-  registerProcessGuards 
+import {
+  delay,
+  getReadableTimestamp,
+  uploadToGithub,
+  formatElapsed,
+  checkProjectEnv,
+  isBrowserConnected,
+  registerProcessGuards
 } from './utils.js';
 
 puppeteer.use(StealthPlugin());
@@ -39,7 +39,7 @@ async function handleFatalError(type) {
   isHandlingError = true;
 
   console.log(`\n🚨 [致命异常] 类型: ${type}`);
-  
+
   try {
     const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
     const imgPath = path.join(CONFIG.errorDir, name);
@@ -53,7 +53,7 @@ async function handleFatalError(type) {
 
     if (page && !page.isClosed()) {
       console.log(`📸 正在截取错误页面...`);
-      await page.screenshot({ path: imgPath }).catch(() => {});
+      await page.screenshot({ path: imgPath }).catch(() => { });
       console.log(`☁️ 正在上传至 GitHub: ${name}`);
       await uploadToGithub(imgPath, name).catch((e) => console.error('GitHub 上传失败:', e.message));
     }
@@ -70,12 +70,12 @@ async function ensureBrowser() {
 
   browser = await puppeteer.launch({
     args: [
-      '--no-sandbox', 
-      '--disable-dev-shm-usage', 
-      '--disable-gpu', 
-      '--disable-blink-features=AutomationControlled', 
-      '--lang=zh-CN', 
-      `--disable-extensions-except=${CONFIG.extPath}`, 
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--disable-blink-features=AutomationControlled',
+      '--lang=zh-CN',
+      `--disable-extensions-except=${CONFIG.extPath}`,
       `--load-extension=${CONFIG.extPath}`
     ],
     headless: isCI ? "new" : false,
@@ -132,34 +132,44 @@ export async function initApp() {
     throw err;
   }
 
-  const targetUrl = env.TARGET_URL;
+  // 假设 env 中已经有了 TEMPLATE 变量
+  const TARGET_URL = env.TARGET_URL;
+  const TEMPLATE = env.TEMPLATE;
 
   await page.evaluateOnNewDocument(({
-    NODE_ACCESS_TOKEN: access_token,
-    NODE_REFRESH_TOKEN: refresh_token,
-    NODE_USERNAME: username,
-    NODE_EXPIRES_IN: expires_in = '604800',
-    TARGET_URL
+    NODE_ACCESS_TOKEN,
+    NODE_USERNAME,
+    TARGET_URL,
+    TEMPLATE  // 从传入的对象中解构大写的 TEMPLATE
   }) => {
     const conf = {
-      access_token, refresh_token, username, expires_in,
+      access_token: NODE_ACCESS_TOKEN,
+      username: NODE_USERNAME,
       menuList: JSON.stringify({
         top1: 1,
         top2: {
           23: {
-            name: "任务", id: "23", isbool: true,
-            url: `${TARGET_URL}/iframe?template=Shopee/任务/index.js&jsFile=js02&return=%2Fview%2FDefault%2Fadmin%2Fhtml%2Fiframe.html%3Ftemplate%3DShopee%2F%25E4%25BB%25BB%25E5%258A%25A1%2Findex.js%26jsFile%3Djs04`
+            name: "任务",
+            id: "23",
+            isbool: true,
+            // 使用大写的变量名进行字符串拼接
+            url: `${TARGET_URL}/iframe?template=${TEMPLATE}`
           }
         }
       })
     };
+
     for (const [k, v] of Object.entries(conf)) {
       localStorage.setItem(k, v ?? '');
     }
-  }, { ...env, TARGET_URL: targetUrl });
+  }, {
+    ...env,
+    TARGET_URL: TARGET_URL,
+    TEMPLATE: TEMPLATE // 确保将 env.TEMPLATE 传给浏览器上下文
+  });
 
   try {
-    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: GOTO_TIMEOUT_MS });
+    await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: GOTO_TIMEOUT_MS });
     console.log("✅ 页面加载成功");
   } catch (err) {
     console.error(`❌ 访问页面超时或失败: ${err.message}`);
@@ -207,9 +217,9 @@ export async function shutdown() {
   if (isShuttingDown) return;
   isShuttingDown = true;
   try {
-    if (page && !page.isClosed()) await page.close().catch(() => {});
+    if (page && !page.isClosed()) await page.close().catch(() => { });
   } finally {
-    if (isBrowserConnected(browser)) await browser.close().catch(() => {});
+    if (isBrowserConnected(browser)) await browser.close().catch(() => { });
   }
 }
 

@@ -13,14 +13,11 @@ env:
   TZ: Asia/Shanghai
   NODE_USERNAME: "4hour"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
-  NODE_REFRESH_TOKEN: "xxx"
-  NODE_EXPIRES_IN: "1777047860"
   MAX_RUNTIME_MINUTES: 70
   TARGET_DIR: "error/task1"
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
-  GITHUB_OWNER: "rendie-com"
-  GITHUB_REPO: "rendie-node.js-error"
   TARGET_URL: "http://localhost:3000/admin"
+  TEMPLATE: "Shopee/任务/index.js&jsFile=js02"
   DB_01: "./sqlite3/shopee/采集箱"
   DB_02: "./sqlite3/shopee/聊聊"
 
