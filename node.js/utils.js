@@ -72,11 +72,11 @@ export function checkProjectEnv(env = process.env) {
   console.log(`\n--- 🚀 Rendie 项目变量检查 ---`);
   const keys = [
     'NODE_USERNAME', 'NODE_ACCESS_TOKEN', 
-    'TARGET_URL', 'MAX_RUNTIME_MINUTES', 'TARGET_DIR',
+    'TARGET_URL','TEMPLATE', 'MAX_RUNTIME_MINUTES', 'TARGET_DIR',
     'GITHUB_TOKEN'
   ];
 
-  const sensitive = ['GITHUB_TOKEN', 'NODE_ACCESS_TOKEN', 'NODE_REFRESH_TOKEN'];
+  const sensitive = ['GITHUB_TOKEN', 'NODE_ACCESS_TOKEN'];
 
   keys.forEach(key => {
     const val = env[key] || '未设置 ❌';
