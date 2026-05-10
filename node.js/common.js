@@ -40,7 +40,7 @@ async function handleFatalError(type) {
 
   console.log(`\n🚨 [致命异常] 类型: ${type}`);
 
- 
+  try {
     const name = `${type}_${getReadableTimestamp()}_${Date.now().toString().slice(-3)}.png`;
     const imgPath = path.join(CONFIG.errorDir, name);
 
@@ -57,7 +57,12 @@ async function handleFatalError(type) {
       console.log(`☁️ 正在上传至 GitHub: ${name}`);
       await uploadToGithub(imgPath, name).catch((e) => console.error('GitHub 上传失败:', e.message));
     }
-
+  } catch (e) {
+    console.error('处理报错截图时发生异常:', e.message);
+  } finally {
+    console.log(`🛑 正在强制关闭任务...`);
+    await shutdown();
+  }
 }
 
 async function ensureBrowser() {
