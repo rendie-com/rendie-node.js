@@ -203,8 +203,8 @@ export async function runMonitor() {
       console.log(`[${formatElapsed(elapsed)}] : ${title || "页面挂起"}`);
     }
 
-    const isErr = title.includes("出错1");
-    const isSuccess = title.includes("已完成所有任务1");
+    const isErr = title.includes("出错");
+    const isSuccess = title.includes("已完成所有任务");
     const isTimeOut = elapsed > CONFIG.maxTime;
 
     if (isErr || isTimeOut || isSuccess) {
