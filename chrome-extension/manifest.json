@@ -61,7 +61,6 @@
    "name": "__MSG_EXTENSION_NAME__",
    "permissions": [
       "declarativeNetRequest",
-      "declarativeNetRequestFeedback",
       "downloads",
       "notifications",
       "storage",

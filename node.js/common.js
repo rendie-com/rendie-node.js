@@ -84,10 +84,14 @@ async function ensureBrowser() {
       '--no-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
-      '--disable-blink-features=AutomationControlled',
       '--lang=zh-CN',
+      '--accept-lang=zh-CN', // 强制指定浏览器首选语言列表
       `--disable-extensions-except=${CONFIG.extPath}`,
-      `--load-extension=${CONFIG.extPath}`
+      `--load-extension=${CONFIG.extPath}`,
+      '--disable-infobars',
+      '--window-size=1920,1080',
+      '--no-default-browser-check',
+      '--authentication-service-for-localhost-disabled'
     ],
     headless: isCI ? "new" : false,
     defaultViewport: { width: 1920, height: 1080 },
@@ -123,7 +127,18 @@ async function ensurePage() {
 
   // 3. 监听浏览器脚本崩溃
   page.on('pageerror', async (err) => {
-    console.error(`💀 浏览器脚本崩溃: ${err}`);
+    if (err && typeof err === 'object') {
+      // 打印堆栈信息（如果是 Error 对象，这能看到文件名和行号）
+      if (err.stack) {
+        console.error(`📋 堆栈追踪 (Stack):\n${err.stack}`);
+      } else {
+        console.error('📋 无法直接读取 stack，尝试深度序列化该异常对象:');
+        // 使用 util.inspect 强行将对象展开成字符串，防止控制台只显示 [object Object]
+        console.error(util.inspect(err, { showHidden: true, depth: null, colors: true }));
+      }
+    } else {
+      console.error(`📋 异常原始文本: ${err}`);
+    }
     await handleFatalError('JS_CRASH');
   });
 
@@ -203,7 +218,7 @@ export async function runMonitor() {
       console.log(`[${formatElapsed(elapsed)}] : ${title || "页面挂起"}`);
     }
 
-    const isErr = title.includes("出错");
+    const isErr = title.includes("出错1");
     const isSuccess = title.includes("已完成所有任务");
     const isTimeOut = elapsed > CONFIG.maxTime;
 
