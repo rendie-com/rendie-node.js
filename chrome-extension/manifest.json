@@ -20,11 +20,15 @@
             "https://*.rendie.com/*",
             "https://*.1688.com/*",
             "https://*.shopee.cn/*",
+            "https://*.shopee.com/*",
+            "https://*.shopeex.cn/*",
             "http://localhost/*",
             "http://10.168.1.159/*",
             "https://*.xiapibuy.com/*",
             "https://*.taobao.com/*",
-            "https://*.tmall.com/*"
+            "https://*.tmall.com/*",
+            "https://*.keyouyun.com/*",
+            "https://*.huoxiaoyi.com/*"
          ],
          "run_at": "document_end"
       }
@@ -36,11 +40,15 @@
       "https://*.rendie.com/*",
       "https://*.1688.com/*",
       "https://*.shopee.cn/*",
+      "https://*.shopee.com/*",
+      "https://*.shopeex.cn/*",
       "http://localhost/*",
       "http://10.168.1.159/*",
       "https://*.xiapibuy.com/*",
       "https://*.taobao.com/*",
-      "https://*.tmall.com/*"
+      "https://*.tmall.com/*",
+      "https://*.keyouyun.com/*",
+      "https://*.huoxiaoyi.com/*"
    ],
    "icons": {
       "16": "icons/icon16.png",
@@ -48,6 +56,7 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
    },
+   "devtools_page": "devtools/index.html",
    "manifest_version": 3,
    "name": "__MSG_EXTENSION_NAME__",
    "permissions": [

@@ -16,4 +16,3 @@ chrome.declarativeNetRequest API如何使用？                       https://ju
 
 //"debugger",
 //"proxy"
-"devtools_page": "devtools/index.html",
