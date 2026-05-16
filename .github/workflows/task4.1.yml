@@ -48,7 +48,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
-      - name: 3. 【shopee/营销中心/】数据库还原 (读档)
+      - name: 3. 【_1688/采集箱/】数据库还原 (读档)
         uses: actions/cache@v5
         with:
           path: ${{ env.DB_01 }}
@@ -58,7 +58,7 @@ jobs:
 
       - name: 5. 数据库状态检查与同步
         run: |
-          # 检查 DB_01 (营销中心)
+          # 检查 DB_01
           if [ -d "${{ env.DB_01 }}" ] && [ "$(ls -A ${{ env.DB_01 }} 2>/dev/null)" ]; then
             echo "✅ [DB_01] 缓存命中，跳过下载。"
           else
