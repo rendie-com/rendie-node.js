@@ -127,13 +127,17 @@ async function ensurePage() {
 
   // 3. 监听浏览器脚本崩溃
   page.on('pageerror', async (err) => {
-    // 打印堆栈信息（如果是 Error 对象，这能看到文件名和行号）
-    if (err.stack) {
-      console.error(`📋 堆栈追踪 (Stack):\n${err.stack}`);
+    if (err && typeof err === 'object') {
+      // 打印堆栈信息（如果是 Error 对象，这能看到文件名和行号）
+      if (err.stack) {
+        console.error(`📋 堆栈追踪 (Stack):\n${err.stack}`);
+      } else {
+        console.error('📋 无法直接读取 stack，尝试深度序列化该异常对象:');
+        // 使用 util.inspect 强行将对象展开成字符串，防止控制台只显示 [object Object]
+        console.error(util.inspect(err, { showHidden: true, depth: null, colors: true }));
+      }
     } else {
-      console.error('📋 无法直接读取 stack，尝试深度序列化该异常对象:');
-      // 使用 util.inspect 强行将对象展开成字符串，防止控制台只显示 [object Object]
-      console.error(util.inspect(err, { showHidden: true, depth: null, colors: true }));
+      console.error(`📋 异常原始文本: ${err}`);
     }
     await handleFatalError('JS_CRASH');
   });
