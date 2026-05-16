@@ -123,7 +123,7 @@ async function ensurePage() {
 
   // 3. 监听浏览器脚本崩溃
   page.on('pageerror', async (err) => {
-    console.error(`💀 浏览器脚本崩溃: ${err.message}`);
+    console.error(`💀 浏览器脚本崩溃: ${err}`);
     await handleFatalError('JS_CRASH');
   });
 
