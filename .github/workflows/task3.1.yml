@@ -106,7 +106,7 @@ jobs:
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
         run: |
           # 并行安装系统库与依赖
-          ssudo apt-get update -o Acquire::Languages=none -qq && sudo apt-get install -y --no-install-recommends fonts-droid-fallback libgbm-dev -qq &
+          sudo apt-get update -o Acquire::Languages=none -qq && sudo apt-get install -y --no-install-recommends fonts-droid-fallback libgbm-dev -qq &
           npm ci --prefix node.js --prefer-offline --no-audit &
           npm ci --prefix next.js --prefer-offline --no-audit &
           wait
