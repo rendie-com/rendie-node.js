@@ -104,7 +104,7 @@
       ]
     },
     "condition": {
-      "urlFilter": "||1688---.com",
+      "urlFilter": "||page.1688.com/shtml/static/wrongpage.html",
       "resourceTypes": [
         "xmlhttprequest",
         "sub_frame",
