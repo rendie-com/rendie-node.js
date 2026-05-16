@@ -14,4 +14,6 @@ chrome.declarativeNetRequest API如何使用？                       https://ju
 官网帮助        https://github.com/GoogleChrome/chrome-extensions-samples
 
 
-注：rules.json 文件里面seller.shopee.cn的配置没有帮到我。。。。
+//"debugger",
+//"proxy"
+"devtools_page": "devtools/index.html",

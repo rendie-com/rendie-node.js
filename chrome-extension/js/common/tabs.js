@@ -170,8 +170,7 @@ export const common_tabs = {
                 {
                     oo.next(t);
                 });
-            }
-            else { oo.next(t); }
+            }            else { oo.next(t); }
         },
         
     },

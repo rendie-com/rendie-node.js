@@ -1,43 +1,7 @@
 [
   {
     "id": 1,
-    "action": {
-      "type": "modifyHeaders",
-      "requestHeaders": [
-        {
-          "header": "sec-ch-ua",
-          "operation": "set",
-          "value": "\"Chromium\";v=\"136\", \"Google Chrome\";v=\"136\", \"Not.A/Brand\";v=\"99\""
-        }
-      ]
-    },
-    "condition": {
-      "urlFilter": "*"
-    }
-  },
-  {
-    "id": 2,
-    "action": {
-      "type": "modifyHeaders",
-      "requestHeaders": [
-        {
-          "header": "Content-Type",
-          "operation": "set",
-          "value": "application/json+protobuf"
-        },
-        {
-          "header": "X-Goog-Api-Key",
-          "operation": "set",
-          "value": ""
-        }
-      ]
-    },
-    "condition": {
-      "urlFilter": "||translate-pa.googleapis.com/v1/translateHtml"
-    }
-  },
-  {
-    "id": 3,
+    "priority": 2,
     "action": {
       "type": "modifyHeaders",
       "requestHeaders": [
@@ -74,11 +38,13 @@
       ]
     },
     "condition": {
-      "urlFilter": "||h5api.m.1688.com/h5/mtop.1688.trading.dataline.service/1.0"
+      "urlFilter": "||h5api.m.1688.com/h5/mtop.1688.trading.dataline.service/1.0",
+      "resourceTypes": ["xmlhttprequest"]
     }
   },
   {
-    "id": 4,
+    "id": 2,
+    "priority": 2,
     "action": {
       "type": "modifyHeaders",
       "requestHeaders": [
@@ -105,7 +71,68 @@
       ]
     },
     "condition": {
-      "urlFilter": "||seller.shopee.cn/api/mkt/cmt/nominated/nominated_entity_list"
+      "urlFilter": "||seller.shopee.cn/api/mkt/cmt/nominated/nominated_entity_list",
+      "resourceTypes": ["xmlhttprequest"]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "responseHeaders": [
+        {
+          "header": "Access-Control-Allow-Origin",
+          "operation": "set",
+          "value": "*"
+        },
+        {
+          "header": "Access-Control-Allow-Methods",
+          "operation": "set",
+          "value": "GET, POST, OPTIONS, PUT"
+        },
+        {
+          "header": "Access-Control-Allow-Headers",
+          "operation": "set",
+          "value": "*"
+        },
+        {
+          "header": "Access-Control-Allow-Credentials",
+          "operation": "set",
+          "value": "true"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||1688.com",
+      "resourceTypes": [
+        "xmlhttprequest",
+        "sub_frame",
+        "ping"
+      ]
+    }
+  },
+  {
+    "id": 4,
+    "priority": 2,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Content-Type",
+          "operation": "set",
+          "value": "application/json+protobuf"
+        },
+        {
+          "header": "X-Goog-Api-Key",
+          "operation": "set",
+          "value": ""
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||translate-pa.googleapis.com/v1/translateHtml",
+      "resourceTypes": ["xmlhttprequest"]
     }
   }
 ]

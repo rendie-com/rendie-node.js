@@ -4,7 +4,6 @@
          "16": "icons/icon16.png",
          "32": "icons/icon32.png"
       },
-      "browser_style": false,
       "default_title": "点击可以截图"
    },
    "background": {
@@ -14,10 +13,18 @@
    "content_scripts": [
       {
          "js": [
+            "js/jquery-4.0.0.min.js",
             "js/content-script.js"
          ],
          "matches": [
-            "\u003Call_urls>"
+            "https://*.rendie.com/*",
+            "https://*.1688.com/*",
+            "https://*.shopee.cn/*",
+            "http://localhost/*",
+            "http://10.168.1.159/*",
+            "https://*.xiapibuy.com/*",
+            "https://*.taobao.com/*",
+            "https://*.tmall.com/*"
          ],
          "run_at": "document_end"
       }
@@ -26,7 +33,14 @@
    "homepage_url": "https://www.rendie.com/",
    "description": "__MSG_EXTENSION_DESCRIPTION__",
    "host_permissions": [
-      "\u003Call_urls>"
+      "https://*.rendie.com/*",
+      "https://*.1688.com/*",
+      "https://*.shopee.cn/*",
+      "http://localhost/*",
+      "http://10.168.1.159/*",
+      "https://*.xiapibuy.com/*",
+      "https://*.taobao.com/*",
+      "https://*.tmall.com/*"
    ],
    "icons": {
       "16": "icons/icon16.png",
@@ -34,25 +48,20 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
    },
-   "key": "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDOKViYMRyMKSxdwxQceEf9qkdgGdByfasdnPjrTXvCVI7fDzGEUjFd11CWnZmH294MS2mFNqt1ztFJSiCn7DUF3R1MnJefyCOthc4qoRr2O6ktQRa1DasN0plt8YIBalnKar2+EPaFyNOnOOWOmRm0YcR7HDCfRIut8z4Q3LynKwIDAQA1",
    "manifest_version": 3,
    "name": "__MSG_EXTENSION_NAME__",
-   "devtools_page": "devtools/index.html",
    "permissions": [
-      "webRequest",
       "declarativeNetRequest",
+      "declarativeNetRequestFeedback",
       "downloads",
       "notifications",
       "storage",
       "cookies",
       "webNavigation",
       "activeTab",
-      "unlimitedStorage",
       "clipboardWrite",
       "tabs",
-      "scripting",
-      "debugger",
-      "proxy"
+      "scripting"
    ],
    "declarative_net_request": {
       "rule_resources": [
@@ -70,16 +79,6 @@
          }
       }
    },
-   "update_url": "https://clients2.google.com/service/update2/crx",
-   "version": "2026.1.8",
-   "web_accessible_resources": [
-      {
-         "resources": [
-            "js/jquery-4.0.0.min.js"
-         ],
-         "matches": [
-            "<all_urls>"
-         ]
-      }
-   ]
+   "version": "2026.5.15",
+   "web_accessible_resources": []
 }

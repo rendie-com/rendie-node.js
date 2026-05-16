@@ -14,12 +14,13 @@ export const index =
         chrome.runtime.onMessage.addListener(function (request, sender, next) {
             if (request.cmd == 'content-script-rendie-com')//表是只接收【content-script】的信息。
             {
-                //console.log('【rendie/js/index.js】收到消息', request);
+                //console.log('【rendie/js/background.js】收到消息', request);
                 switch (request.id) {
                     case "load_screenshot": next(This.screenshot); break;
                     case "close_screenshot_window": This.c01(next); break;
                     case "isOpenDevtools": common_tabs.isOpenDevtools = true; next(); break;//是否已打开Devtools页面。
                     case "isOnRequestFinished": common_tabs.isOnRequestFinished = true; next(); break;//已打开监听器。
+                    case "isRD": next(true); break;
                     default: This.d01(request, next); break;
                 }
             }
@@ -53,22 +54,6 @@ export const index =
     },
     /////////////////////////////////////////////
     d01: function (request, next) {
-        if (request.action == "isRD") {
-            // 标签页ID，{active: true, currentWindow: true}参数确保查询的是当前窗口中活动的标签
-            chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-                next(tabs[0].windowId)
-            });//获取当前窗体【windowId】
-        }
-        else {
-            if (request.windowId != 0) {
-                this.d02(request, next)
-            } else {
-                next("谷歌扩展中【windowId】未初始化，请先运行“gg.isRD”方法。")
-                //ommon.notifications("未初始化", "谷歌扩展中【windowId】未初始化，请先运行“gg.isRD”方法。", chrome.runtime.getURL('icons/icon256.png'), next);
-            }
-        }
-    },
-    d02: function (request, next) {
         switch (request.action) {
             /////////////js/common/tabs.js 开始////////////////////////////////
             case "tabs_remove_create_indexOf"://删除后创建再查找(返回网页内容)
