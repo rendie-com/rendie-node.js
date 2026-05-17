@@ -21,4 +21,15 @@ chrome.declarativeNetRequest API如何使用？                       https://ju
 manifest.json中下面俩个域名，是为了能取到cookies里面的“SPC_CDS”值才加进去的。
 "*://*.shopeesz.com/*",
 "*://*.shopeemobile.com/*"
+
+// 榨出页面上所有引用的 JS 脚本域名
+const scriptDomains = new Set();
+document.querySelectorAll('script[src]').forEach(script => {
+    try {
+        const url = new URL(script.src);
+        scriptDomains.add(url.hostname);
+    } catch(e) {}
+});
+console.log("=== 正在控制该页面的 JS 脚本域名群 ===");
+console.log(Array.from(scriptDomains));
 =====================================
