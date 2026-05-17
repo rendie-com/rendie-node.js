@@ -7,7 +7,6 @@ node_modules/
 # 业务输出与备份（你已有的）
 帮助/
 error/
-../chrome-extension/帮助.txt
 
 # 浏览器相关缓存（新增：必带）
 .cache/
