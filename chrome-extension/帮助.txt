@@ -16,3 +16,9 @@ chrome.declarativeNetRequest API如何使用？                       https://ju
 
 //"debugger",
 //"proxy"
+
+=================================================
+manifest.json中下面俩个域名，是为了能取到cookies里面的“SPC_CDS”值才加进去的。
+"*://*.shopeesz.com/*",
+"*://*.shopeemobile.com/*"
+=====================================

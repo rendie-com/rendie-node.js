@@ -6,6 +6,7 @@ import { common_fetch } from './common/fetch.js';
 import { common_cookies } from './common/cookies.js';
 import { common_tabs } from './common/tabs.js';
 import { common_uploadFile } from './common/uploadFile.js';
+
 export const index =
 {
     screenshot: "",//截图的图片，暂时存放在这。
