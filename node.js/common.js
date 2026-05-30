@@ -95,6 +95,7 @@ async function ensureBrowser() {
       '--disable-gpu',
       '--lang=zh-CN',
       '--accept-lang=zh-CN', // 强制指定浏览器首选语言列表
+      '--disable-extensions-security',
       `--disable-extensions-except=${CONFIG.extPath}`,
       `--load-extension=${CONFIG.extPath}`,
       '--disable-web-security',       // 2. 放开安全限制
