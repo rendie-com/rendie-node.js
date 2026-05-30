@@ -215,21 +215,7 @@ export async function initApp() {
 
   try {
     await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: GOTO_TIMEOUT_MS });
-    console.log("✅ 页面加载成功");
-    // 在 page.goto 之后，添加一段轮询检测
-    await page.evaluate(async () => {
-      let retries = 0;
-      while (!window.RendieBot && retries < 10) {
-        console.log("⏳ 等待 RendieBot 注入...");
-        await new Promise(r => setTimeout(r, 500));
-        retries++;
-      }
-      if (window.RendieBot) {
-        console.log("🚀 RendieBot 已经在页面中就绪！");
-      } else {
-        console.error("❌ 致命错误：RendieBot 注入失败，页面已加载完成但仍未发现变量");
-      }
-    });
+    console.log("✅ 页面加载成功"); 
   } catch (err) {
     console.error(`❌ 访问页面超时或失败: ${err.message}`);
     await handleFatalError('GOTO_TIMEOUT');
