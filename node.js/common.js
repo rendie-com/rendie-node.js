@@ -96,7 +96,7 @@ async function ensureBrowser() {
 
   browser = await puppeteer.launch({
     executablePath: chromePath,
-    headless:  false,
+    headless: 'new',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
