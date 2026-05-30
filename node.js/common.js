@@ -42,8 +42,8 @@ if (!fs.existsSync(resolvedExtPath)) {
 console.log(`================================================`);
 
 export const CONFIG = {
-  url: env.TARGET_URL || "https://www.rendie.com/admin",
-  extPath: path.resolve(__dirname, '../chrome-extension'),
+  url: env.TARGET_URL,
+  extPath: resolvedExtPath,
   errorDir: path.resolve(env.TARGET_DIR || 'error'),
   maxTime: (Number.parseInt(env.MAX_RUNTIME_MINUTES, 10) || 1) * 60000,
   interval: 1000,
