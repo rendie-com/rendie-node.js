@@ -19,10 +19,12 @@ const env = process.env;
 const isCI = env.GITHUB_ACTIONS === 'true';
 let isShuttingDown = false;
 let isHandlingError = false; // 防止多次触发关闭逻辑
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const CONFIG = {
   url: env.TARGET_URL || "https://www.rendie.com/admin",
-  extPath: path.resolve('../chrome-extension'),
+  extPath: path.resolve(__dirname, '../chrome-extension'),
   errorDir: path.resolve(env.TARGET_DIR || 'error'),
   maxTime: (Number.parseInt(env.MAX_RUNTIME_MINUTES, 10) || 1) * 60000,
   interval: 1000,
