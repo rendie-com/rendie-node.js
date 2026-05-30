@@ -46,6 +46,6 @@ jobs:
           npm ci --prefer-offline --no-audit --no-fund
 
       - name: 4. Execution
-        # 使用 xvfb-run 包裹启动命令，这会让 Chrome 认为自己在一个完整的显示器环境中
-        # 从而允许插件引擎正常加载
-        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" npm start
+        # 增加 --server-args 参数，明确告诉它在内存中建立一个完整的显示服务
+        # 增加 --wait-for-xvfb 让程序等 xvfb 彻底跑起来再启动浏览器
+        run: xvfb-run --auto-servernum --server-num=1 --server-args="-screen 0 1920x1080x24" npm start
