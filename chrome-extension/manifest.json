@@ -96,5 +96,14 @@
       }
    },
    "version": "2026.5.15",
-   "web_accessible_resources": []
+   "web_accessible_resources": [
+      {
+         "resources": [
+            "js/inject.js"
+         ],
+         "matches": [
+            "<all_urls>"
+         ]
+      }
+   ]
 }

@@ -1,0 +1,3 @@
+window.RendieBot = {
+    version: "2026.5.15",
+};
