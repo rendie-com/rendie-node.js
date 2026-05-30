@@ -24,26 +24,9 @@ let isHandlingError = false; // 防止多次触发关闭逻辑
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const resolvedExtPath = path.resolve(__dirname, '../chrome-extension');
-// 🎯 工业级调试：在启动前强行打印路径状态，破除迷雾
-console.log(`============= 🔍 插件路径自动化排查 =============`);
-console.log(`当前脚本绝对路径 (__dirname): ${__dirname}`);
-console.log(`计算出的插件绝对路径 (extPath): ${resolvedExtPath}`);
-console.log(`该路径在服务器上是否存在?: ${fs.existsSync(resolvedExtPath) ? '✅ 存在' : '❌ 不存在！'}`);
-if (!fs.existsSync(resolvedExtPath)) {
-  // 如果不存在，顺便打印一下上一级目录里到底有些啥，看看是不是大小写拼错了
-  try {
-    const parentDir = path.resolve(__dirname, '../');
-    console.log(`上一级目录 (${parentDir}) 下实际包含的文件/文件夹有:`, fs.readdirSync(parentDir));
-  } catch (e) {
-    console.log('读取目录失败:', e.message);
-  }
-}
-console.log(`================================================`);
-
 export const CONFIG = {
   url: env.TARGET_URL,
-  extPath: resolvedExtPath,
+  extPath: path.resolve(__dirname, '../chrome-extension'),
   errorDir: path.resolve(env.TARGET_DIR || 'error'),
   maxTime: (Number.parseInt(env.MAX_RUNTIME_MINUTES, 10) || 1) * 60000,
   interval: 1000,
@@ -114,6 +97,8 @@ async function ensureBrowser() {
       '--accept-lang=zh-CN', // 强制指定浏览器首选语言列表
       `--disable-extensions-except=${CONFIG.extPath}`,
       `--load-extension=${CONFIG.extPath}`,
+      '--disable-web-security',       // 2. 放开安全限制
+      '--user-data-dir=/tmp/p_user',
       '--disable-infobars',
       '--window-size=1920,1080',
       '--no-default-browser-check',
