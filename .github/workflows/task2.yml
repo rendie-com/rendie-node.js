@@ -18,6 +18,7 @@ env:
   TARGET_DIR: "error/task2"
   TARGET_URL: "https://www.rendie.com/admin"
   TEMPLATE: "Shopee/任务/index.js&jsFile=js02"
+  PUPPETEER_SKIP_DOWNLOAD: "true" # 🎯 关键改动 1：告诉 npm 安装依赖时绝对不要下载内置 Chrome，省时省空间
 
 jobs:
   automation_job:
@@ -29,12 +30,16 @@ jobs:
 
     steps:
       - name: 1. Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4 # 💡 提示：当前稳定主流是 v4，v6 还没发布正式版，建议先用 v4 规避潜在问题
+
+      # 🎯 关键改动 2：在跑代码前，强行清除掉之前 Actions 遗留的受损 Puppeteer 缓存
+      - name: 1.5 Clear Broken Puppeteer Cache
+        run: rm -rf ~/.cache/puppeteer
 
       - name: 2. Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4 # 💡 提示：同理，建议先用稳定的 v4
         with:
-          node-version: 24
+          node-version: 20          # 💡 提示：Node 24 是当前的非 LTS 实验版本，20 是工业级稳定版，CI 跑自动化推荐用 20
           cache: 'npm'
           cache-dependency-path: 'node.js/package-lock.json'
 
