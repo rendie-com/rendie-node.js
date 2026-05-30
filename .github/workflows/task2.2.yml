@@ -1,0 +1,51 @@
+name: 2.2.shopee-保持在线-置顶推广-5分钟
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+permissions:
+  contents: write
+  actions: write
+
+env:   
+  TZ: Asia/Shanghai
+  NODE_USERNAME: "5minute"
+  NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_2 }}
+  MAX_RUNTIME_MINUTES: 2
+  GITHUB_TOKEN: ${{ secrets.MY_PAT }}
+  TARGET_DIR: "error/task2"
+  TARGET_URL: "https://www.rendie.com/admin"
+  TEMPLATE: "Shopee/任务/index.js&jsFile=js02"
+
+jobs:
+  automation_job:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: ./node.js
+
+    steps:
+      - name: 1. Checkout
+        uses: actions/checkout@v6
+
+      - name: 2. Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'npm'
+          cache-dependency-path: 'node.js/package-lock.json'
+
+      - name: 3. Install Dependencies & xvfb
+        run: |
+          # 安装必要的依赖和虚拟显示服务
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-droid-fallback libgbm-dev xvfb -qq
+          npm ci --prefer-offline --no-audit --no-fund
+
+      - name: 4. Execution
+        # 使用 xvfb-run 包裹启动命令，这会让 Chrome 认为自己在一个完整的显示器环境中
+        # 从而允许插件引擎正常加载
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" npm start
