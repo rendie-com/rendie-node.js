@@ -40,5 +40,6 @@ jobs:
 
       - name: 3. Execution
         run: |
+          sudo apt-get install -y --no-install-recommends fonts-droid-fallback libgbm-dev -qq &
           npm ci --prefer-offline --no-audit --no-fund
           npm start
