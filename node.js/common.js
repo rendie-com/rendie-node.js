@@ -2,6 +2,8 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
 import {
   delay,
   getReadableTimestamp,
