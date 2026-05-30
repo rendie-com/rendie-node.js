@@ -96,8 +96,7 @@ async function ensureBrowser() {
 
   browser = await puppeteer.launch({
     executablePath: chromePath,
-    // 关键修改：改为 false，并配合 xvfb 使用
-    headless: false,
+    headless: 'new',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -105,68 +104,123 @@ async function ensureBrowser() {
       '--disable-gpu',
       '--lang=zh-CN',
       '--accept-lang=zh-CN',
-      // 关键修改：移除旧的 security 标志，改为更稳健的自动化配置
-      '--enable-automation',
-      '--disable-blink-features=AutomationControlled',
+      '--disable-extensions-security',
       `--disable-extensions-except=${CONFIG.extPath}`,
       `--load-extension=${CONFIG.extPath}`,
       '--disable-web-security',
       `--user-data-dir=${uniqueUserDataDir}`,
       '--disable-infobars',
       '--window-size=1920,1080',
-      '--no-first-run', // 增加这一行，防止弹出“首次运行”干扰
       '--no-default-browser-check',
+      '--authentication-service-for-localhost-disabled'
     ],
     defaultViewport: { width: 1920, height: 1080 },
     ignoreHTTPSErrors: true,
   });
 
-  async function ensurePage() {
-    if (page && !page.isClosed()) return page;
-    if (!isBrowserConnected(browser)) await ensureBrowser();
+  return browser;
+}
 
-    page = await browser.newPage();
+async function ensurePage() {
+  if (page && !page.isClosed()) return page;
+  if (!isBrowserConnected(browser)) await ensureBrowser();
 
-    // 1. 监听网络请求失败 (优化版：只拦截核心 Document 失败，忽略次要统计代码的偶尔抖动)
-    page.on('requestfailed', async (request) => {
-      const type = request.resourceType();
-      if (type === 'document') {
-        console.error(`❌ 主页面加载失败: [${type}] ${request.url()} -> ${request.failure()?.errorText}`);
-        await handleFatalError(`NET_FAIL_${type.toUpperCase()}`);
-      } else if (['script', 'xhr', 'fetch'].includes(type)) {
-        console.warn(`⚠️ 次要请求失败(已忽略): [${type}] ${request.url()}`);
-      }
-    });
+  page = await browser.newPage();
 
-    // 2. 监听 HTTP 异常状态码 (400以上)
-    page.on('response', async (response) => {
-      const status = response.status();
-      if (status >= 400) {
-        console.error(`🚫 HTTP 异常 [${status}]: ${response.url()}`);
-        await handleFatalError(`HTTP_ERR_${status}`);
-      }
-    });
+  // 1. 监听网络请求失败 (优化版：只拦截核心 Document 失败，忽略次要统计代码的偶尔抖动)
+  page.on('requestfailed', async (request) => {
+    const type = request.resourceType();
+    if (type === 'document') {
+      console.error(`❌ 主页面加载失败: [${type}] ${request.url()} -> ${request.failure()?.errorText}`);
+      await handleFatalError(`NET_FAIL_${type.toUpperCase()}`);
+    } else if (['script', 'xhr', 'fetch'].includes(type)) {
+      console.warn(`⚠️ 次要请求失败(已忽略): [${type}] ${request.url()}`);
+    }
+  });
 
-    // 3. 监听浏览器脚本崩溃
-    page.on('pageerror', async (err) => {
-      if (err && typeof err === 'object') {
-        if (err.stack) {
-          console.error(`📋 堆栈追踪 (Stack):\n${err.stack}`);
-        } else {
-          console.error('📋 无法直接读取 stack，尝试深度序列化该异常对象:');
-          console.error(JSON.stringify(err, null, 2));
-        }
+  // 2. 监听 HTTP 异常状态码 (400以上)
+  page.on('response', async (response) => {
+    const status = response.status();
+    if (status >= 400) {
+      console.error(`🚫 HTTP 异常 [${status}]: ${response.url()}`);
+      await handleFatalError(`HTTP_ERR_${status}`);
+    }
+  });
+
+  // 3. 监听浏览器脚本崩溃
+  page.on('pageerror', async (err) => {
+    if (err && typeof err === 'object') {
+      if (err.stack) {
+        console.error(`📋 堆栈追踪 (Stack):\n${err.stack}`);
       } else {
-        console.error(`📋 异常原始文本: ${err}`);
+        console.error('📋 无法直接读取 stack，尝试深度序列化该异常对象:');
+        console.error(JSON.stringify(err, null, 2));
       }
-      await handleFatalError('JS_CRASH');
-    });
+    } else {
+      console.error(`📋 异常原始文本: ${err}`);
+    }
+    await handleFatalError('JS_CRASH');
+  });
 
-    // 4. 转发浏览器内部日志到控制台
-    page.on('console', msg => {
-      const text = msg.text();
-      console.log(`🌐 [浏览器内控制台] ${text}`);
-    });
+  // 4. 转发浏览器内部日志到控制台
+  page.on('console', msg => {
+    const text = msg.text();
+    console.log(`🌐 [浏览器内控制台] ${text}`);
+  });
+
+  return page;
+}
+
+export async function initApp() {
+  checkProjectEnv(env);
+  await ensureBrowser();
+
+  // 捕获 ensurePage 自身的初始化错误
+  try {
+    await ensurePage();
+  } catch (err) {
+    console.error(`🔥 ensurePage 失败: ${err.message}`);
+    await handleFatalError('INIT_PAGE_ERR');
+    throw err;
+  }
+
+  const TARGET_URL = env.TARGET_URL;
+  const TEMPLATE = env.TEMPLATE;
+
+  await page.evaluateOnNewDocument(({
+    NODE_ACCESS_TOKEN,
+    NODE_USERNAME,
+    TARGET_URL,
+    TEMPLATE
+  }) => {
+    const conf = {
+      access_token: NODE_ACCESS_TOKEN,
+      username: NODE_USERNAME,
+      menuList: JSON.stringify({
+        top1: 1,
+        top2: {
+          23: {
+            name: "任务",
+            id: "23",
+            isbool: true,
+            url: `${TARGET_URL}/iframe?template=${TEMPLATE}`
+          }
+        }
+      })
+    };
+
+    for (const [k, v] of Object.entries(conf)) {
+      localStorage.setItem(k, v ?? '');
+    }
+  }, {
+    ...env,
+    TARGET_URL: TARGET_URL,
+    TEMPLATE: TEMPLATE
+  });
+
+  try {
+    await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: GOTO_TIMEOUT_MS });
+    console.log("✅ 页面加载成功");
     // 在 page.goto 之后，添加一段轮询检测
     await page.evaluate(async () => {
       let retries = 0;
@@ -181,109 +235,56 @@ async function ensureBrowser() {
         console.error("❌ 致命错误：RendieBot 注入失败，页面已加载完成但仍未发现变量");
       }
     });
-    return page;
+  } catch (err) {
+    console.error(`❌ 访问页面超时或失败: ${err.message}`);
+    await handleFatalError('GOTO_TIMEOUT');
+    throw err;
   }
+}
 
-  export async function initApp() {
-    checkProjectEnv(env);
-    await ensureBrowser();
+export async function runMonitor() {
+  const start = Date.now();
+  let step = 0;
 
-    // 捕获 ensurePage 自身的初始化错误
-    try {
-      await ensurePage();
-    } catch (err) {
-      console.error(`🔥 ensurePage 失败: ${err.message}`);
-      await handleFatalError('INIT_PAGE_ERR');
-      throw err;
+  while (!isShuttingDown && isBrowserConnected(browser)) {
+    const elapsed = Date.now() - start;
+
+    // 获取标题，如果获取不到说明页面可能已关闭，返回空
+    const title = await page.title().catch(() => "");
+
+    if (step % 10 === 0) {
+      console.log(`[${formatElapsed(elapsed)}] : ${title || "页面挂起"}`);
     }
 
-    const TARGET_URL = env.TARGET_URL;
-    const TEMPLATE = env.TEMPLATE;
+    const isErr = title.includes("出错");
+    const isSuccess = title.includes("已完成所有任务");
+    const isTimeOut = elapsed > CONFIG.maxTime;
 
-    await page.evaluateOnNewDocument(({
-      NODE_ACCESS_TOKEN,
-      NODE_USERNAME,
-      TARGET_URL,
-      TEMPLATE
-    }) => {
-      const conf = {
-        access_token: NODE_ACCESS_TOKEN,
-        username: NODE_USERNAME,
-        menuList: JSON.stringify({
-          top1: 1,
-          top2: {
-            23: {
-              name: "任务",
-              id: "23",
-              isbool: true,
-              url: `${TARGET_URL}/iframe?template=${TEMPLATE}`
-            }
-          }
-        })
-      };
-
-      for (const [k, v] of Object.entries(conf)) {
-        localStorage.setItem(k, v ?? '');
+    if (isErr || isTimeOut || isSuccess) {
+      if (isErr || isTimeOut) {
+        const type = isErr ? 'UI_ERROR' : 'RUNTIME_TIMEOUT';
+        console.log(`🚨 终止 [${type}]: ${title}`);
+        await handleFatalError(type);
+      } else {
+        console.log(`✅ 任务圆满完成: ${title}`);
+        await shutdown();
       }
-    }, {
-      ...env,
-      TARGET_URL: TARGET_URL,
-      TEMPLATE: TEMPLATE
-    });
-
-    try {
-      await page.goto(TARGET_URL, { waitUntil: 'networkidle2', timeout: GOTO_TIMEOUT_MS });
-      console.log("✅ 页面加载成功");
-    } catch (err) {
-      console.error(`❌ 访问页面超时或失败: ${err.message}`);
-      await handleFatalError('GOTO_TIMEOUT');
-      throw err;
+      return;
     }
+
+    step++;
+    await delay(CONFIG.interval);
   }
+}
 
-  export async function runMonitor() {
-    const start = Date.now();
-    let step = 0;
-
-    while (!isShuttingDown && isBrowserConnected(browser)) {
-      const elapsed = Date.now() - start;
-
-      // 获取标题，如果获取不到说明页面可能已关闭，返回空
-      const title = await page.title().catch(() => "");
-
-      if (step % 10 === 0) {
-        console.log(`[${formatElapsed(elapsed)}] : ${title || "页面挂起"}`);
-      }
-
-      const isErr = title.includes("出错");
-      const isSuccess = title.includes("已完成所有任务");
-      const isTimeOut = elapsed > CONFIG.maxTime;
-
-      if (isErr || isTimeOut || isSuccess) {
-        if (isErr || isTimeOut) {
-          const type = isErr ? 'UI_ERROR' : 'RUNTIME_TIMEOUT';
-          console.log(`🚨 终止 [${type}]: ${title}`);
-          await handleFatalError(type);
-        } else {
-          console.log(`✅ 任务圆满完成: ${title}`);
-          await shutdown();
-        }
-        return;
-      }
-
-      step++;
-      await delay(CONFIG.interval);
-    }
+export async function shutdown() {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  try {
+    if (page && !page.isClosed()) await page.close().catch(() => { });
+  } finally {
+    if (isBrowserConnected(browser)) await browser.close().catch(() => { });
   }
+}
 
-  export async function shutdown() {
-    if (isShuttingDown) return;
-    isShuttingDown = true;
-    try {
-      if (page && !page.isClosed()) await page.close().catch(() => { });
-    } finally {
-      if (isBrowserConnected(browser)) await browser.close().catch(() => { });
-    }
-  }
-
-  registerProcessGuards({ shutdown });
+registerProcessGuards({ shutdown });
