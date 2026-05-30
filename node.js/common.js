@@ -150,7 +150,10 @@ async function ensurePage() {
     }
     await handleFatalError('JS_CRASH');
   });
-
+  page.on('console', msg => {
+    const text = msg.text();
+    console.log(`🌐 [浏览器内控制台] ${text}`);
+  });
   return page;
 }
 
