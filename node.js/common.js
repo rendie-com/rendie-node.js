@@ -101,20 +101,13 @@ async function ensureBrowser() {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--lang=zh-CN',
-      '--accept-lang=zh-CN',
-      // 关键修改：移除旧的 security 标志，改为更稳健的自动化配置
-      '--enable-automation',
-      '--disable-blink-features=AutomationControlled',
-      `--disable-extensions-except=${CONFIG.extPath}`,
-      `--load-extension=${CONFIG.extPath}`,
+      // 关键参数：防止 GitHub 环境下插件被拦截
       '--disable-web-security',
-      `--user-data-dir=${uniqueUserDataDir}`,
-      '--disable-infobars',
-      '--window-size=1920,1080',
-      '--no-first-run', // 增加这一行，防止弹出“首次运行”干扰
-      '--no-default-browser-check',
+      '--allow-running-insecure-content',
+      // 强制允许插件在所有页面注入
+      '--extensions-on-chrome-urls',
+      `--load-extension=${CONFIG.extPath}`,
+      '--headless=new' // 如果这个不行，换成 --headless=false，但必须配合 xvfb
     ],
     defaultViewport: { width: 1920, height: 1080 },
     ignoreHTTPSErrors: true,
