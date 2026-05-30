@@ -2,6 +2,8 @@ import puppeteer from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+
 import {
   delay,
   getReadableTimestamp,
@@ -19,10 +21,12 @@ const env = process.env;
 const isCI = env.GITHUB_ACTIONS === 'true';
 let isShuttingDown = false;
 let isHandlingError = false; // 防止多次触发关闭逻辑
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const CONFIG = {
-  url: env.TARGET_URL || "https://www.rendie.com/admin",
-  extPath: path.resolve('../chrome-extension'),
+  url: env.TARGET_URL,
+  extPath: path.resolve(__dirname, '../chrome-extension'),
   errorDir: path.resolve(env.TARGET_DIR || 'error'),
   maxTime: (Number.parseInt(env.MAX_RUNTIME_MINUTES, 10) || 1) * 60000,
   interval: 1000,
@@ -76,24 +80,40 @@ async function handleFatalError(type) {
     await shutdown();
   }
 }
+
 async function ensureBrowser() {
   if (isBrowserConnected(browser)) return browser;
+  const chromePath = isCI ? '/usr/bin/google-chrome' : undefined;
+  
+  if (isCI) {
+    console.log(`🚀 CI 环境检测成功，正在强制重定向 Chrome 路径至: ${chromePath}`);
+  }
+
+  // 🎯 动态生成隔离目录，杜绝 5 分钟定时任务多进程并发时的锁死崩溃
+  const uniqueUserDataDir = isCI 
+    ? `/tmp/p_user_${Date.now()}_${Math.floor(Math.random() * 1000)}` 
+    : '/tmp/p_user_local';
 
   browser = await puppeteer.launch({
+    executablePath: chromePath,
+    headless: isCI ? true : false,
     args: [
       '--no-sandbox',
+      '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
       '--lang=zh-CN',
-      '--accept-lang=zh-CN', // 强制指定浏览器首选语言列表
+      '--accept-lang=zh-CN',
+      '--disable-extensions-security', 
       `--disable-extensions-except=${CONFIG.extPath}`,
       `--load-extension=${CONFIG.extPath}`,
+      '--disable-web-security',
+      `--user-data-dir=${uniqueUserDataDir}`,
       '--disable-infobars',
       '--window-size=1920,1080',
       '--no-default-browser-check',
       '--authentication-service-for-localhost-disabled'
     ],
-    headless: isCI ? "new" : false,
     defaultViewport: { width: 1920, height: 1080 },
     ignoreHTTPSErrors: true,
   });
@@ -107,12 +127,14 @@ async function ensurePage() {
 
   page = await browser.newPage();
 
-  // 1. 监听网络请求失败 (DNS/连接被拒等)
+  // 1. 监听网络请求失败 (优化版：只拦截核心 Document 失败，忽略次要统计代码的偶尔抖动)
   page.on('requestfailed', async (request) => {
     const type = request.resourceType();
-    if (['document', 'script', 'xhr', 'fetch'].includes(type)) {
-      console.error(`❌ 网络请求失败: [${type}] ${request.url()} -> ${request.failure()?.errorText}`);
+    if (type === 'document') {
+      console.error(`❌ 主页面加载失败: [${type}] ${request.url()} -> ${request.failure()?.errorText}`);
       await handleFatalError(`NET_FAIL_${type.toUpperCase()}`);
+    } else if (['script', 'xhr', 'fetch'].includes(type)) {
+      console.warn(`⚠️ 次要请求失败(已忽略): [${type}] ${request.url()}`);
     }
   });
 
@@ -128,13 +150,11 @@ async function ensurePage() {
   // 3. 监听浏览器脚本崩溃
   page.on('pageerror', async (err) => {
     if (err && typeof err === 'object') {
-      // 打印堆栈信息（如果是 Error 对象，这能看到文件名和行号）
       if (err.stack) {
         console.error(`📋 堆栈追踪 (Stack):\n${err.stack}`);
       } else {
         console.error('📋 无法直接读取 stack，尝试深度序列化该异常对象:');
-        // 使用 util.inspect 强行将对象展开成字符串，防止控制台只显示 [object Object]
-        console.error(util.inspect(err, { showHidden: true, depth: null, colors: true }));
+        console.error(JSON.stringify(err, null, 2));
       }
     } else {
       console.error(`📋 异常原始文本: ${err}`);
@@ -142,6 +162,12 @@ async function ensurePage() {
     await handleFatalError('JS_CRASH');
   });
 
+  // 4. 转发浏览器内部日志到控制台
+  page.on('console', msg => {
+    const text = msg.text();
+    console.log(`🌐 [浏览器内控制台] ${text}`);
+  });
+  
   return page;
 }
 
@@ -158,7 +184,6 @@ export async function initApp() {
     throw err;
   }
 
-  // 假设 env 中已经有了 TEMPLATE 变量
   const TARGET_URL = env.TARGET_URL;
   const TEMPLATE = env.TEMPLATE;
 
@@ -166,7 +191,7 @@ export async function initApp() {
     NODE_ACCESS_TOKEN,
     NODE_USERNAME,
     TARGET_URL,
-    TEMPLATE  // 从传入的对象中解构大写的 TEMPLATE
+    TEMPLATE 
   }) => {
     const conf = {
       access_token: NODE_ACCESS_TOKEN,
@@ -178,7 +203,6 @@ export async function initApp() {
             name: "任务",
             id: "23",
             isbool: true,
-            // 使用大写的变量名进行字符串拼接
             url: `${TARGET_URL}/iframe?template=${TEMPLATE}`
           }
         }
@@ -191,7 +215,7 @@ export async function initApp() {
   }, {
     ...env,
     TARGET_URL: TARGET_URL,
-    TEMPLATE: TEMPLATE // 确保将 env.TEMPLATE 传给浏览器上下文
+    TEMPLATE: TEMPLATE
   });
 
   try {
@@ -218,7 +242,7 @@ export async function runMonitor() {
       console.log(`[${formatElapsed(elapsed)}] : ${title || "页面挂起"}`);
     }
 
-    const isErr = title.includes("出错1");
+    const isErr = title.includes("出错");
     const isSuccess = title.includes("已完成所有任务");
     const isTimeOut = elapsed > CONFIG.maxTime;
 
