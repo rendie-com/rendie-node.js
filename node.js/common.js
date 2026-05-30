@@ -78,10 +78,15 @@ async function handleFatalError(type) {
 }
 async function ensureBrowser() {
   if (isBrowserConnected(browser)) return browser;
-
+  const chromePath = isCI ? '/usr/bin/google-chrome' : undefined;
+  if (isCI) {
+    console.log(`🚀 CI 环境检测成功，正在强制重定向 Chrome 路径至: ${chromePath}`);
+  }
   browser = await puppeteer.launch({
+    executablePath: chromePath,
     args: [
       '--no-sandbox',
+      '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
       '--lang=zh-CN',
@@ -128,13 +133,11 @@ async function ensurePage() {
   // 3. 监听浏览器脚本崩溃
   page.on('pageerror', async (err) => {
     if (err && typeof err === 'object') {
-      // 打印堆栈信息（如果是 Error 对象，这能看到文件名和行号）
       if (err.stack) {
         console.error(`📋 堆栈追踪 (Stack):\n${err.stack}`);
       } else {
         console.error('📋 无法直接读取 stack，尝试深度序列化该异常对象:');
-        // 使用 util.inspect 强行将对象展开成字符串，防止控制台只显示 [object Object]
-        console.error(util.inspect(err, { showHidden: true, depth: null, colors: true }));
+        console.error(JSON.stringify(err, null, 2));
       }
     } else {
       console.error(`📋 异常原始文本: ${err}`);
