@@ -84,20 +84,20 @@ async function handleFatalError(type) {
 async function ensureBrowser() {
   if (isBrowserConnected(browser)) return browser;
   const chromePath = isCI ? '/usr/bin/google-chrome' : undefined;
-  
+
   if (isCI) {
     console.log(`🚀 CI 环境检测成功，正在强制重定向 Chrome 路径至: ${chromePath}`);
   }
 
   // 🎯 动态生成隔离目录，杜绝 5 分钟定时任务多进程并发时的锁死崩溃
-  const uniqueUserDataDir = isCI 
-    ? `/tmp/p_user_${Date.now()}_${Math.floor(Math.random() * 1000)}` 
+  const uniqueUserDataDir = isCI
+    ? `/tmp/p_user_${Date.now()}_${Math.floor(Math.random() * 1000)}`
     : '/tmp/p_user_local';
 
   browser = await puppeteer.launch({
     executablePath: chromePath,
     // 🎯 核心修复：使用 true 开启支持插件的新版无头模式
-    headless: isCI ? true : false,
+    headless: false,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -105,7 +105,7 @@ async function ensureBrowser() {
       '--disable-gpu',
       '--lang=zh-CN',
       '--accept-lang=zh-CN',
-      '--disable-extensions-security', 
+      '--disable-extensions-security',
       `--disable-extensions-except=${CONFIG.extPath}`,
       `--load-extension=${CONFIG.extPath}`,
       '--disable-web-security',
@@ -168,7 +168,7 @@ async function ensurePage() {
     const text = msg.text();
     console.log(`🌐 [浏览器内控制台] ${text}`);
   });
-  
+
   return page;
 }
 
@@ -192,7 +192,7 @@ export async function initApp() {
     NODE_ACCESS_TOKEN,
     NODE_USERNAME,
     TARGET_URL,
-    TEMPLATE 
+    TEMPLATE
   }) => {
     const conf = {
       access_token: NODE_ACCESS_TOKEN,
