@@ -84,14 +84,14 @@ async function handleFatalError(type) {
 async function ensureBrowser() {
   if (isBrowserConnected(browser)) return browser;
   const chromePath = isCI ? '/usr/bin/google-chrome' : undefined;
-  
+
   if (isCI) {
     console.log(`🚀 CI 环境检测成功，正在强制重定向 Chrome 路径至: ${chromePath}`);
   }
 
   // 🎯 动态生成隔离目录，杜绝 5 分钟定时任务多进程并发时的锁死崩溃
-  const uniqueUserDataDir = isCI 
-    ? `/tmp/p_user_${Date.now()}_${Math.floor(Math.random() * 1000)}` 
+  const uniqueUserDataDir = isCI
+    ? `/tmp/p_user_${Date.now()}_${Math.floor(Math.random() * 1000)}`
     : '/tmp/p_user_local';
 
   browser = await puppeteer.launch({
@@ -104,7 +104,7 @@ async function ensureBrowser() {
       '--disable-gpu',
       '--lang=zh-CN',
       '--accept-lang=zh-CN',
-      '--disable-extensions-security', 
+      '--disable-extensions-security',
       `--disable-extensions-except=${CONFIG.extPath}`,
       `--load-extension=${CONFIG.extPath}`,
       '--disable-web-security',
@@ -167,7 +167,20 @@ async function ensurePage() {
     const text = msg.text();
     console.log(`🌐 [浏览器内控制台] ${text}`);
   });
-  
+  // 在 page.goto 之后，添加一段轮询检测
+  await page.evaluate(async () => {
+    let retries = 0;
+    while (!window.RendieBot && retries < 10) {
+      console.log("⏳ 等待 RendieBot 注入...");
+      await new Promise(r => setTimeout(r, 500));
+      retries++;
+    }
+    if (window.RendieBot) {
+      console.log("🚀 RendieBot 已经在页面中就绪！");
+    } else {
+      console.error("❌ 致命错误：RendieBot 注入失败，页面已加载完成但仍未发现变量");
+    }
+  });
   return page;
 }
 
@@ -191,7 +204,7 @@ export async function initApp() {
     NODE_ACCESS_TOKEN,
     NODE_USERNAME,
     TARGET_URL,
-    TEMPLATE 
+    TEMPLATE
   }) => {
     const conf = {
       access_token: NODE_ACCESS_TOKEN,
