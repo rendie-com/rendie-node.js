@@ -20,7 +20,7 @@
             "https://*.rendie.com/*",
             "https://*.1688.com/*",
             "https://*.shopeex.cn/*",
-            "*://127.0.0.1/*",
+            "http://127.0.0.1/*",
             "http://localhost/*",
             "http://10.168.1.159/*",
             "https://*.xiapibuy.com/*",
@@ -29,9 +29,10 @@
             "https://*.keyouyun.com/*",
             "https://*.huoxiaoyi.com/*",
             "https://*.ollama.com/*",
-            "*://*.shopee.cn/*",
-            "*://*.shopeesz.com/*",
-            "*://*.shopeemobile.com/*"
+            "https://*.shopee.cn/*",
+            "https://*.shopee.com/*",
+            "https://*.shopeesz.com/*",
+            "https://*.shopeemobile.com/*"
          ],
          "run_at": "document_end"
       }
@@ -43,7 +44,7 @@
       "https://*.rendie.com/*",
       "https://*.1688.com/*",
       "https://*.shopeex.cn/*",
-      "*://127.0.0.1/*",
+      "http://127.0.0.1/*",
       "http://localhost/*",
       "http://10.168.1.159/*",
       "https://*.xiapibuy.com/*",
@@ -51,10 +52,11 @@
       "https://*.tmall.com/*",
       "https://*.keyouyun.com/*",
       "https://*.huoxiaoyi.com/*",
-      "https://*.ollama.com/*",      
-      "*://*.shopee.cn/*",
-      "*://*.shopeesz.com/*",
-      "*://*.shopeemobile.com/*"
+      "https://*.ollama.com/*",
+      "https://*.shopee.cn/*",
+      "https://*.shopee.com/*",
+      "https://*.shopeesz.com/*",
+      "https://*.shopeemobile.com/*"
    ],
    "icons": {
       "16": "icons/icon16.png",
