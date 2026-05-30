@@ -67,6 +67,7 @@
    "devtools_page": "devtools/index.html",
    "manifest_version": 3,
    "name": "__MSG_EXTENSION_NAME__",
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmSabvzMg7OIIuYPWSvRGzDrainmTIyvRaA0ZQ8nqY8z88z/d7AlzcVo2DjM7aycs9jGj+o2xfTDXbrYNlcmx5RnwAbZr5rZyXrQcnNzU/UqCa3+kqzqheyUwndqlnrfD4XXvwgSiCfWSiuufRrJAP4O6JnYqiZ/3l57st9BhPK4w1f1kzsV6ZykGFX90GXLXi08JKGHhw5o5gH88We2pEzWvTaifWSf0ovar4/F72y+QrLh32gx8L+ky+HpnDX7zxoU4WJTb/WaOTUJeRzh+z5UbwIRekqQRptGz7OQnhIJpMvhvRgDCDkbXInhegf6wnG5GnqQiHe3i2pBj22YbewIDAQAB",
    "permissions": [
       "declarativeNetRequest",
       "downloads",
