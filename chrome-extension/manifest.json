@@ -34,7 +34,7 @@
             "https://*.shopeesz.com/*",
             "https://*.shopeemobile.com/*"
          ],
-         "run_at": "document_end"
+         "run_at": "document_start"
       }
    ],
    "default_locale": "zh_CN",

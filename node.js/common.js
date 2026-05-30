@@ -104,7 +104,7 @@ async function ensureBrowser() {
       '--no-default-browser-check',
       '--authentication-service-for-localhost-disabled'
     ],
-    headless: isCI ? "new" : false,
+    headless: isCI ? 'shell' : false,
     defaultViewport: { width: 1920, height: 1080 },
     ignoreHTTPSErrors: true,
   });
