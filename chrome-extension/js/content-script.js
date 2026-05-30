@@ -1,6 +1,6 @@
 ﻿'use strict';
 (function () {
-    console.log("【Rendie 插件】注入成功！");
+    //console.log("【Rendie 插件】注入成功！");    
     window.addEventListener('rendie-req-dispatch', function (e) {
         const rid = e.detail?.requestId;
         if (!e.detail || !chrome.runtime || !chrome.runtime.id) {
