@@ -80,33 +80,41 @@ async function handleFatalError(type) {
     await shutdown();
   }
 }
+
 async function ensureBrowser() {
   if (isBrowserConnected(browser)) return browser;
   const chromePath = isCI ? '/usr/bin/google-chrome' : undefined;
+  
   if (isCI) {
     console.log(`🚀 CI 环境检测成功，正在强制重定向 Chrome 路径至: ${chromePath}`);
   }
+
+  // 🎯 动态生成隔离目录，杜绝 5 分钟定时任务多进程并发时的锁死崩溃
+  const uniqueUserDataDir = isCI 
+    ? `/tmp/p_user_${Date.now()}_${Math.floor(Math.random() * 1000)}` 
+    : '/tmp/p_user_local';
+
   browser = await puppeteer.launch({
     executablePath: chromePath,
+    // 🎯 核心修复：使用 true 开启支持插件的新版无头模式
+    headless: isCI ? true : false,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-gpu',
       '--lang=zh-CN',
-      '--accept-lang=zh-CN', // 强制指定浏览器首选语言列表
+      '--accept-lang=zh-CN',
       '--disable-extensions-security', 
-      '--disable-web-security',
       `--disable-extensions-except=${CONFIG.extPath}`,
       `--load-extension=${CONFIG.extPath}`,
-      '--disable-web-security',       // 2. 放开安全限制
-      '--user-data-dir=/tmp/p_user',
+      '--disable-web-security',
+      `--user-data-dir=${uniqueUserDataDir}`,
       '--disable-infobars',
       '--window-size=1920,1080',
       '--no-default-browser-check',
       '--authentication-service-for-localhost-disabled'
     ],
-    headless: isCI ? true : false,
     defaultViewport: { width: 1920, height: 1080 },
     ignoreHTTPSErrors: true,
   });
@@ -120,12 +128,14 @@ async function ensurePage() {
 
   page = await browser.newPage();
 
-  // 1. 监听网络请求失败 (DNS/连接被拒等)
+  // 1. 监听网络请求失败 (优化版：只拦截核心 Document 失败，忽略次要统计代码的偶尔抖动)
   page.on('requestfailed', async (request) => {
     const type = request.resourceType();
-    if (['document', 'script', 'xhr', 'fetch'].includes(type)) {
-      console.error(`❌ 网络请求失败: [${type}] ${request.url()} -> ${request.failure()?.errorText}`);
+    if (type === 'document') {
+      console.error(`❌ 主页面加载失败: [${type}] ${request.url()} -> ${request.failure()?.errorText}`);
       await handleFatalError(`NET_FAIL_${type.toUpperCase()}`);
+    } else if (['script', 'xhr', 'fetch'].includes(type)) {
+      console.warn(`⚠️ 次要请求失败(已忽略): [${type}] ${request.url()}`);
     }
   });
 
@@ -152,10 +162,13 @@ async function ensurePage() {
     }
     await handleFatalError('JS_CRASH');
   });
+
+  // 4. 转发浏览器内部日志到控制台
   page.on('console', msg => {
     const text = msg.text();
     console.log(`🌐 [浏览器内控制台] ${text}`);
   });
+  
   return page;
 }
 
@@ -172,7 +185,6 @@ export async function initApp() {
     throw err;
   }
 
-  // 假设 env 中已经有了 TEMPLATE 变量
   const TARGET_URL = env.TARGET_URL;
   const TEMPLATE = env.TEMPLATE;
 
@@ -180,7 +192,7 @@ export async function initApp() {
     NODE_ACCESS_TOKEN,
     NODE_USERNAME,
     TARGET_URL,
-    TEMPLATE  // 从传入的对象中解构大写的 TEMPLATE
+    TEMPLATE 
   }) => {
     const conf = {
       access_token: NODE_ACCESS_TOKEN,
@@ -192,7 +204,6 @@ export async function initApp() {
             name: "任务",
             id: "23",
             isbool: true,
-            // 使用大写的变量名进行字符串拼接
             url: `${TARGET_URL}/iframe?template=${TEMPLATE}`
           }
         }
@@ -205,7 +216,7 @@ export async function initApp() {
   }, {
     ...env,
     TARGET_URL: TARGET_URL,
-    TEMPLATE: TEMPLATE // 确保将 env.TEMPLATE 传给浏览器上下文
+    TEMPLATE: TEMPLATE
   });
 
   try {
