@@ -1,4 +1,4 @@
-name: 3.1 SHOPEE-商品-营销中心-1天 (Cache高速版)
+name: 3.1 SHOPEE-商品-营销中心-1天
 
 on:
   workflow_dispatch: 
@@ -14,7 +14,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   NODE_USERNAME: "1day"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_3 }}
-  MAX_RUNTIME_MINUTES: 1
+  MAX_RUNTIME_MINUTES: 50 
   TARGET_DIR: "error/task3"
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   TARGET_URL: "http://localhost:3000/admin"
@@ -25,7 +25,9 @@ env:
 jobs:
   automation_job:
     runs-on: ubuntu-latest
-    timeout-minutes: 80 
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-jammy
+    timeout-minutes: 60 
     steps:
       - name: 1. 下载主程序代码
         uses: actions/checkout@v6
@@ -54,7 +56,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.DB_01 }}
-          key: shopee-marketing-${{ github.run_id }}
+          key: shopee-marketing-v1
           restore-keys: |
             shopee-marketing-
 
@@ -62,7 +64,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.DB_02 }}
-          key: shopee-product-${{ github.run_id }}
+          key: shopee-product-v1
           restore-keys: |
             shopee-product-
 
@@ -96,10 +98,10 @@ jobs:
           node-version: 24
           cache: 'npm'
           cache-dependency-path: |
-            node.js/package-lock.json
+            playwright/package-lock.json
             next.js/package-lock.json
 
-      - name: 7. 构建并运行生产环境
+      - name: 7. 构建并运行生产 environment
         env:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
@@ -107,7 +109,7 @@ jobs:
         run: |
           # 并行安装系统库与依赖
           sudo apt-get install -y --no-install-recommends fonts-droid-fallback libgbm-dev -qq &
-          npm ci --prefix node.js --prefer-offline --no-audit &
+          npm ci --prefix playwright --prefer-offline --no-audit & 
           npm ci --prefix next.js --prefer-offline --no-audit &
           wait
           
@@ -116,10 +118,4 @@ jobs:
           npm run start --prefix next.js & 
           
           sleep 10
-          cd node.js && npm run start
-
-      - name: 8. 删除【shopee/营销中心/】【shopee/商品/】缓存
-        run: |
-          gh cache list --limit 100 | grep -E "shopee-product-|shopee-marketing-" | cut -f 1 | xargs -I {} gh cache delete {}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          cd playwright && npm run start  
