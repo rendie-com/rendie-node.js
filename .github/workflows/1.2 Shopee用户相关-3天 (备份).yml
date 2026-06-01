@@ -28,7 +28,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.DB_01 }}
-          key: shopee-crawler-not-exists-${{ github.run_id }}
+          key: shopee-crawler-v1
           restore-keys: |
             shopee-crawler-
 
@@ -36,7 +36,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.DB_02 }}
-          key: shopee-chat-not-exists-${{ github.run_id }}
+          key: shopee-chat-v1
           restore-keys: |
             shopee-chat-
 
