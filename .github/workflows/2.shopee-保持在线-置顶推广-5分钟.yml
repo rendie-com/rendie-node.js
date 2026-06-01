@@ -22,6 +22,8 @@ env:
 jobs:
   automation_job:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-jammy
     timeout-minutes: 5
     defaults:
       run:
@@ -34,12 +36,11 @@ jobs:
       - name: 2. Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 24
+          node-version: 20
           cache: 'npm'
-          cache-dependency-path: 'playwright/package-lock.json'
+          cache-dependency-path: './playwright/package-lock.json'
 
       - name: 3. Execution
         run: |
-          sudo apt-get install -y --no-install-recommends fonts-droid-fallback libgbm-dev -qq &
-          npm ci --prefer-offline --no-audit --no-fund
+          npm ci --prefer-offline --no-audit --no-fund --omit=optional --quiet
           npm start
