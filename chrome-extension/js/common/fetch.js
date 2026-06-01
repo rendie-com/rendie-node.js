@@ -1,6 +1,6 @@
 //JS — fetch详解        https://www.cnblogs.com/qinlinkun/p/18188651
 'use strict';
-export const common_fetch = {
+export const http = {
     getFetch: function (url,type, next) {
         fetch(url).then(response => {
             if(type=="json"){

@@ -1,5 +1,8 @@
+//utils.mjs
 import fs from 'fs';
 import { Octokit } from '@octokit/rest';
+import { state } from './config.mjs';
+let isHandlingError = false; // 防止多次触发关闭逻辑
 
 export const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
@@ -92,4 +95,11 @@ export function checkProjectEnv(env = process.env) {
     console.log(`${key.padEnd(20)} : ${display}`);
   });
   console.log(`------------------------------\n`);
+}
+
+export async function shutdown() {
+  if (state.isShuttingDown) return;
+  state.isShuttingDown = true;
+  if (state.browser) await state.browser.close().catch(() => { });
+  process.exit(0);
 }

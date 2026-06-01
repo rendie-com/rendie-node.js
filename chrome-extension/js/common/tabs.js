@@ -1,3 +1,4 @@
+//tabs.js
 'use strict';
 import { common } from './index.js';
 export const common_tabs = {   
@@ -14,7 +15,7 @@ export const common_tabs = {
     },
     ///////执行JS后再找内容////////////////////////////////////////
     tabs_executeScript_indexOf: {
-        a01: function (index, windowId, fileArr, code, htmlArr, isHighlightTab, next) {
+        a01: function (index, windowId,  code, htmlArr, isHighlightTab, next) {
             let oo = {
                 index: index,
                 windowId: windowId,
@@ -22,7 +23,7 @@ export const common_tabs = {
                 isHighlightTab: isHighlightTab,
                 next: next
             }
-            common_tabs.executeScript.a01(index, windowId, fileArr, code, this.a02, this, oo)//执行JS
+            common_tabs.executeScript.a01(index, windowId,  code, this.a02, this, oo)//执行JS
         },
         a02: function (t, oo) {
             common.Time("name", 100, this.a03, this, oo);
@@ -37,11 +38,10 @@ export const common_tabs = {
     /////////////////////////////////////////
     tabs_executeScript_devtools_indexOf: {
         //注：这里devtools必须是打开的。
-        a01: function (index, windowId, fileArr, code, htmlArr, isHighlightTab, next) {
+        a01: function (index, windowId,  code, htmlArr, isHighlightTab, next) {
             let o1 = {
                 index: index,
-                windowId: windowId,
-                fileArr:fileArr,
+                windowId: windowId,               
                 code:code,
             },o2={
                 htmlArr: htmlArr,
@@ -65,7 +65,7 @@ export const common_tabs = {
         a03: function (oo) {
             //是否已打开监听器
             if (common_tabs.isOnRequestFinished) {                
-                common_tabs.executeScript.a01(oo.index, oo.windowId, oo.fileArr, oo.code)//执行JS
+                common_tabs.executeScript.a01(oo.index, oo.windowId,  oo.code)//执行JS
             }
             else {
                 common.Time("name", 1, this.a03, this, oo);
@@ -170,16 +170,15 @@ export const common_tabs = {
                 {
                     oo.next(t);
                 });
-            }            else { oo.next(t); }
+            }else { oo.next(t); }
         },
         
     },
     executeScript: {
-        a01: function (index, windowId, fileArr, code, next, This, t) {
+        a01: function (index, windowId,  code, next, This, t) {
             let oo = {
                 index: index,
-                windowId: windowId,
-                fileArr: fileArr,
+                windowId: windowId,              
                 code: code,
                 next: next,
                 This: This,
@@ -187,23 +186,11 @@ export const common_tabs = {
             }
             common.ifTabs(index, windowId, this.a02, this, common.notTab, oo)
         },
-        a02: function (id, oo) {
-            if (oo.fileArr) {
-                let This = this;
-                fetch(chrome.runtime.getURL("js/jquery-4.0.0.min.js")).then(response => { return response.text(); }).then(str => {
-                    // 处理返回的数据
-                    This.a03(str, id, oo)
-                })
-            }
-            else {
-                this.a03("", id, oo)
-            }
-        },
-        a03: function (str, id, oo) {
+        a02: function (id, oo) {                          
             chrome.scripting.executeScript({
                 target: { tabId: id },
                 function: function (code) { return eval(code); },
-                args: [str + "\n\n" + oo.code], // 传递给func的参数数组
+                args: [ oo.code], // 传递给func的参数数组
                 world: 'MAIN' // 可以是 'MAIN' 或者 'ISOLATED'
             }, (injectionResults) => {
                 if(oo.next) common.apply(injectionResults[0].result, oo.next, oo.This, oo.t)

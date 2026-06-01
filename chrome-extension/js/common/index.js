@@ -1,3 +1,4 @@
+//index.js
 'use strict';
 export const common = {
     TimeNameArr: [],//定时器名称

@@ -2,7 +2,7 @@
 'use strict';
 import { common } from './common/index.js';
 import { proxy } from './common/proxy.js';
-import { common_fetch } from './common/fetch.js';
+import { http } from './common/fetch.js';
 import { common_cookies } from './common/cookies.js';
 import { common_tabs } from './common/tabs.js';
 import { common_uploadFile } from './common/uploadFile.js';
@@ -64,7 +64,7 @@ export const index =
                 common_tabs.tabs_remove_create_devtools_indexOf.a01(request.index, request.windowId, request.url, request.htmlArr, request.isHighlightTab, next);
                 break;
             case "tabs_executeScript_indexOf"://执行js代码后再找内容(返回网页内容)
-                common_tabs.tabs_executeScript_indexOf.a01(request.index, request.windowId, request.fileArr, request.code, request.htmlArr, request.isHighlightTab, next);
+                common_tabs.tabs_executeScript_indexOf.a01(request.index, request.windowId, request.code, request.htmlArr, request.isHighlightTab, next);
                 break;
             case "tabs_executeScript_devtools_indexOf"://执行js代码后再找内容(返回网页内容) --- 要打开“开发者工具“ 
                 common_tabs.tabs_executeScript_devtools_indexOf.a01(request.index, request.windowId, request.fileArr, request.code, request.htmlArr, request.isHighlightTab, next);
@@ -83,11 +83,11 @@ export const index =
             case "delCookies": common_cookies.delCookies(request.url, request.name, next); break;//删除单个cookie信息
             // //////////common_cookies.js  结束//////////////////////////////////////////////////////////
             // ////////////////////////////////////////////////////////
-            case "getFetch": common_fetch.getFetch(request.url, request.type, next); break;//获取URL内容
-            case "getHeadersFetch": common_fetch.getHeadersFetch(request.url, request.headersObj, request.type, next); break;//获取URL内容
-            case "postHeadersFetch": common_fetch.postHeadersFetch(request.url, request.headersObj, request.data, request.type, next); break;//获取URL内容
-            case "postFetch": common_fetch.postFetch(request.url, request.data, next); break;//普通提交（返回的内容不一定是json格式
-            case "typeFetch": common_fetch.typeFetch(request.url, request.type, request.data, next); break;//指定类型提交
+            case "getFetch": http.getFetch(request.url, request.type, next); break;//获取URL内容
+            case "getHeadersFetch": http.getHeadersFetch(request.url, request.headersObj, request.type, next); break;//获取URL内容
+            case "postHeadersFetch": http.postHeadersFetch(request.url, request.headersObj, request.data, request.type, next); break;//获取URL内容
+            case "postFetch": http.postFetch(request.url, request.data, next); break;//普通提交（返回的内容不一定是json格式
+            case "typeFetch": http.typeFetch(request.url, request.type, request.data, next); break;//指定类型提交
             // case "download": Tool.download(request.url, request.filename, next); break; //下载文件---------已验证
             case "uploadFile": common_uploadFile.uploadFile.a01(request.url, request.type, request.headers, request.data, next); break;//上传文件------已验证
             case "highlightTab": common.highlightTab.a01(request.index, request.windowId, next); break;//高亮tab------已验证
