@@ -7,13 +7,12 @@ export async function ensureBrowser() {
   if (state.browser && state.browser.isConnected()) return state.browser;
 
   const launchOptions = {
-    headless: isCI, // CI 必须开启 headless
+    headless: isCI,
     args: [
       '--no-sandbox',
       '--disable-gpu',
       '--lang=zh-CN',
       '--disable-blink-features=AutomationControlled',
-      // CI 环境专用优化
       ...(isCI ? ['--disable-dev-shm-usage', '--disable-setuid-sandbox'] : ['--start-maximized'])
     ]
   };
