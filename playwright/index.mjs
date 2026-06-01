@@ -34,18 +34,20 @@ export async function initApp() {
 export async function runMonitor() {
   const start = Date.now();
   let step = 0;
-
   while (!state.isShuttingDown && state.browser?.isConnected()) {
     const elapsed = Date.now() - start;
     const title = await state.page.title().catch(() => "");
-
     if (step % 10 === 0) console.log(`[${formatElapsed(elapsed)}] : ${title || "页面挂起"}`);
-
     const isErr = title.includes("出错");
     const isSuccess = title.includes("已完成所有任务");
-
-    if (isErr || isSuccess || elapsed > CONFIG.maxTime) {
-      if (isErr) await handleFatalError('UI_ERROR');
+    if (isErr || elapsed > CONFIG.maxTime || isSuccess) {
+      if (isErr || elapsed > CONFIG.maxTime) {
+        const type = isErr ? 'UI_ERROR' : 'RUNTIME_TIMEOUT';
+        console.log(`🚨 终止 [${type}]: ${title}`);
+        await handleFatalError(type);
+      } else {
+        console.log(`✅ 任务圆满完成: ${title}`);
+      }
       await shutdown();
       return;
     }
