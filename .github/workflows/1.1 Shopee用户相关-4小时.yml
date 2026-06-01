@@ -28,12 +28,12 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.60.0-jammy
     timeout-minutes: 80 
     steps:
-      - name: 1. 代码检出 (主程序与核心前端)
+      - name: 1. 代码检出
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      - name: 2. 检出核心前端代码
+      - name: 2. 检出核心前端
         uses: actions/checkout@v4
         with:
           repository: rendie-com/rendie-next.js
@@ -59,7 +59,7 @@ jobs:
 
       - name: 5. 初始数据库下载与状态检查
         run: |
-          # 检查 DB_01 (Crawler 爬虫数据库)
+          # 检查 DB_01
           if [ -d "${{ env.DB_01 }}" ] && [ "$(ls -A ${{ env.DB_01 }} 2>/dev/null)" ]; then
             echo "✅ [DB_01] 缓存命中，跳过下载。"
           else
@@ -70,7 +70,7 @@ jobs:
             rm -rf temp_db01
           fi
 
-          # 检查 DB_02 (Chat 聊天数据库)
+          # 检查 DB_02
           if [ -d "${{ env.DB_02 }}" ] && [ "$(ls -A ${{ env.DB_02 }} 2>/dev/null)" ]; then
             echo "✅ [DB_02] 缓存命中，跳过下载。"
           else
@@ -90,12 +90,11 @@ jobs:
 
       - name: 7. 构建并运行生产环境
         run: |
-          # 并行安装依赖
-          npm ci --prefix playwright --prefer-offline --no-audit &
-          npm ci --prefix next.js --prefer-offline --no-audit &
+          # 使用 --quiet 减少不必要的日志输出，提升终端响应速度
+          npm ci --prefix playwright --prefer-offline --no-audit --quiet &
+          npm ci --prefix next.js --prefer-offline --no-audit --quiet &
           wait
           
-          # 编译并启动
           npm run build --prefix next.js
           npm run start --prefix next.js & 
           
@@ -104,10 +103,3 @@ jobs:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
-          
-      - name: 8. 清理旧缓存
-        if: always()
-        run: |
-          gh cache list --limit 100 | grep -E "shopee-crawler-|shopee-chat-" | cut -f 1 | xargs -I {} gh cache delete {} || true
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
