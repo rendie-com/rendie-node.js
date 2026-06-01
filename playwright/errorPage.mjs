@@ -40,6 +40,6 @@ export async function handleFatalError(type) {
   } catch (e) {
     console.error('处理报错截图时发生异常:', e.message);
   } finally {
-    //await shutdown();
+    await shutdown();
   }
 }
