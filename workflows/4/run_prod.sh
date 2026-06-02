@@ -37,6 +37,9 @@ cat << 'EOF' > ./next.js/xray_bin/config.json
 }
 EOF
 
+echo "🔐 正在赋予 Xray 核心程序执行权限..."
+chmod +x ./next.js/xray_bin/xray
+
 # 核心修改 2：不再丢弃日志，把日志记录到 xray.log 中
 echo "🚀 正在启动 Xray 代理隧道..."
 ./next.js/xray_bin/xray run -c ./next.js/xray_bin/config.json > ./xray.log 2>&1 &
