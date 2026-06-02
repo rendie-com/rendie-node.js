@@ -1,3 +1,4 @@
+// browser.mjs
 import { chromium } from 'playwright';
 import { state, isCI } from './config.mjs';
 import { handleFatalError } from './errorPage.mjs';
@@ -61,8 +62,21 @@ export async function ensurePage() {
   state.page = await context.newPage();
   await initBridge(state.page);
 
+  // 【检查正确】：只要是 .js 资源或 Document 主文档发生 404/500，立刻报错打断
+  state.page.on('requestfinished', async (request) => {
+    const response = await request.response();
+    if (response && response.status() >= 400) {
+      const errorMsg = `🚨 关键资源加载失败 [HTTP ${response.status()}]: ${request.url()}`;
+      console.error(errorMsg);
+      if (request.url().endsWith('.js') || request.resourceType() === 'document') {
+        state.isShuttingDown = true; // 强制破坏外部 while 循环
+        await handleFatalError('NET_FAIL_DOCUMENT');
+      }
+    }
+  });
+
   state.page.on('pageerror', async (err) => {
-    console.error(`📋 浏览器内部脚本崩溃: ${err.message}`);
+    console.error(`📋 浏览器内部脚本崩溃:`, err);
     await handleFatalError('JS_CRASH');
   });
 
