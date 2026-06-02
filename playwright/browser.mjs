@@ -19,6 +19,12 @@ export async function ensureBrowser() {
       // 禁用各种暴露自动化痕迹的扩展和功能
       '--disable-infobars',
       '--no-default-browser-check',
+      
+      // 🌟【新增】工业级跨域豁免核心参数：彻底摧毁浏览器的同源安全沙箱限制
+      '--disable-web-security',
+      '--disable-features=IsolateOrigins,site-per-process',
+      '--disable-site-isolation-trials',
+
       // 防止 Linux / Docker 环境下特有的无头特征泄露
       ...(isCI ? [
         '--disable-dev-shm-usage',
@@ -62,7 +68,7 @@ export async function initBridge(page) {
     };
   });
 
-  // 内部桥接通信逻辑保持不变
+  // 内部桥接通信 logic
   await page.exposeFunction('nodeBridge', async (request) => {
     try {
       const result = await background.a01(request);
@@ -99,7 +105,11 @@ export async function ensurePage() {
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     deviceScaleFactor: 1,
     hasTouch: false,
-    isMobile: false
+    isMobile: false,
+
+    // 🌟【新增关键开关】Bypass Content Security Policy (内容安全策略豁免)
+    // 允许我们在当前页面上下文（无论是 about:blank 还是 localhost）中，任意通过 window.fetch 跨域调用 1688 的接口
+    bypassCSP: true
   });
 
   state.page = await context.newPage();
