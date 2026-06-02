@@ -1,9 +1,9 @@
 'use strict';
 // browser.mjs
 import { chromium } from 'playwright';
-import { state, isCI } from '../config.mjs';
-import { handleFatalError } from '../errorPage.mjs';
-import { background } from '../common/background.mjs';
+import { state, isCI } from './config.mjs';
+import { handleFatalError } from './errorPage.mjs';
+import { background } from './common/background.mjs';
 import path from 'path';
 
 /**
