@@ -1,17 +1,27 @@
 #!/bin/bash
 set -e
 
+# === 【核心修复】在启动 Xray 前，强行同步安装 Linux 系统的根证书 ===
+echo "🔧 正在同步更新容器系统根证书 (防止 TLS 握手失败)..."
+if command -v apt-get >/dev/null 2>&1; then
+  apt-get update -y && apt-get install -y ca-certificates >/dev/null 2>&1
+elif command -v apk >/dev/null 2>&1; then
+  apk add --no-cache ca-certificates >/dev/null 2>&1
+fi
+
 # 3. 后台启动 Xray 隧道
 echo "🚀 正在启动 Xray 代理隧道..."
 ./next.js/xray_bin/xray run -c ./next.js/xray_bin/config.json > /dev/null 2>&1 &
 sleep 3
 
-# === 【核心修复】严格测试 SOCKS5 代理是否真的通畅 ===
+# 🔍 正在验证代理节点连通性...
 echo "🔍 正在验证代理节点连通性..."
-# 使用 curl 强行挂载本地 socks5 代理访问 ip.sb 或 ipinfo.io，看是否能正确返回你节点的公网 IP
-if ! curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb --max-time 5 > /dev/null; then
-  echo "🚨 [致命错误] Xray 隧道建立失败或 Vless 节点已失效！请检查节点配置。"
-  exit 1 # 强行打断，让 GitHub Actions 在此 Step 立刻爆红停止
+
+# 如果你还是担心节点被跳证书检查（调试用，可以给 curl 加上 -k），这里我们正常请求
+if ! curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb --max-time 6 > /dev/null; then
+  echo "🚨 [致命错误] Xray 隧道建立失败或 Vless 节点已失效！"
+  echo "💡 提示：如果证书已经安装，请确认本地 188.164.248.3 节点的 2087 端口在公网是否对该 CI 环境开放。"
+  exit 1
 fi
 
 CURRENT_IP=$(curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb || echo "未知")
