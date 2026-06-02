@@ -120,15 +120,17 @@ jobs:
           cd playwright && npm run start
 
       # ====================================================================
-      # 8. 同步备份：使用 if-else 条件结构包裹，彻底杜绝中间 exit 0 的中断报错
+      # 8. 同步备份：强制指定 shell 为 bash，移除所有易错特性，确保坚若磐石
       # ====================================================================
       - name: 8. 增量推送至远程备份仓库（每3天或手动强制）
         if: always() 
+        shell: bash   # <--- 极其关键：强制使用完整版 Bash 解释器
         run: |
           DAY_OF_YEAR=$(date +%-j)
           FORCE_BACKUP="${{ github.event.inputs.force_backup }}"
           
-          MOD_RESULT=$(expr $DAY_OF_YEAR % 3)
+          # 安全的原生数学运算
+          MOD_RESULT=$(( DAY_OF_YEAR % 3 ))
           
           if [ "$MOD_RESULT" -ne 0 ] && [ "$FORCE_BACKUP" != "true" ]; then
             echo "ℹ️ 今天是当年第 $DAY_OF_YEAR 天，未满 3 天周期，跳过远程备份推送。"
@@ -137,16 +139,14 @@ jobs:
             git config --global --add safe.directory "*"
             ROOT_DIR=$(pwd)
             
-            SYNC_LIST=(
-              "${{ env.DB_01 }}|rendie-sqlite3-shopee-marketing"
-              "${{ env.DB_02 }}|rendie-sqlite3-shopee-product"
-            )
-
-            for item in "${SYNC_LIST[@]}"; do
+            # 抛弃括号数组，改用最纯正的字符串遍历，彻底告别 Syntax error
+            SYNC_ITEMS="sqlite3/shopee/营销中心|rendie-sqlite3-shopee-marketing sqlite3/shopee/商品|rendie-sqlite3-shopee-product"
+            
+            for item in $SYNC_ITEMS; do
               LOCAL_PATH="${item%%|*}"
               REPO_NAME="${item##*|}"
               
-              if [ ! -d "$ROOT_DIR/$LOCAL_PATH" ] || [ -z "$(ls -A $ROOT_DIR/$LOCAL_PATH 2>/dev/null)" ]; then
+              if [ ! -d "$ROOT_DIR/$LOCAL_PATH" ] || [ -z "$(ls -A "$ROOT_DIR/$LOCAL_PATH" 2>/dev/null)" ]; then
                 echo "⚠️ 路径 $LOCAL_PATH 为空，跳过备份该目录。"
                 continue
               fi
@@ -154,7 +154,7 @@ jobs:
               TEMP_DIR="tmp_$REPO_NAME"
               rm -rf "$TEMP_DIR"
               
-              git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/${REPO_NAME}.git "$TEMP_DIR"
+              git clone --depth 1 "https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/${REPO_NAME}.git" "$TEMP_DIR"
               
               mkdir -p "$TEMP_DIR/$LOCAL_PATH"
               cp -af "$ROOT_DIR/$LOCAL_PATH/." "$TEMP_DIR/$LOCAL_PATH/"
@@ -178,7 +178,7 @@ jobs:
           fi
 
       # ====================================================================
-      # 9. 独立分流保存（只要第 8 步不再崩，这里就会执行并成功保存缓存！）
+      # 9. 独立分流保存本地缓存
       # ====================================================================
       - name: 9.1 更新【营销中心】本地缓存基准
         if: always()
