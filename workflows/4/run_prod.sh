@@ -2,6 +2,17 @@
 set -e
 cd ./next.js/xray_bin/
 xray run -c config.json > ./xray.log 2>&1 &
+echo "🔍 正在验证代理节点连通性..."
+if ! curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb --max-time 8 > /dev/null; then
+  echo "🚨 [致命错误] Xray 隧道建立失败！"
+  echo "------------------ 📋 以下为 Xray 核心崩溃日志 ------------------"
+  cat ./xray.log
+  echo "---------------------------------------------------------------"
+  exit 1
+fi
+
+CURRENT_IP=$(curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb || echo "未知")
+echo "✅ 节点本地 SOCKS5 转换成功！当前代理出口 IP: ${CURRENT_IP}"
 cd ../../
 
 echo "📦 正在并行安装双端纯文本依赖..."
