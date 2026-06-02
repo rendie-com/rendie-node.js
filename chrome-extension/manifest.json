@@ -13,7 +13,6 @@
    "content_scripts": [
       {
          "js": [
-            "js/jquery-4.0.0.min.js",
             "js/content-script.js"
          ],
          "matches": [
