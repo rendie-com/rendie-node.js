@@ -1,4 +1,4 @@
-name: 3.SHOPEE-商品-营销中心-1天
+name: 3.shopee-商品-营销中心-1天
 
 on:
   workflow_dispatch:
