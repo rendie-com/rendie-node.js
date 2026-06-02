@@ -7,8 +7,8 @@ on:
         description: '是否强制触发备份推送？(true/false)'
         required: false
         default: 'false'
-  schedule:
-    - cron: "0 */4 * * *" # 每 4 小时循环触发一次
+  # schedule:
+  #   - cron: "0 */4 * * *" # 每 4 小时循环触发一次
 
 permissions:
   contents: write
