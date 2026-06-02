@@ -11,7 +11,6 @@ permissions:
 
 env:   
   TZ: Asia/Shanghai
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   NODE_USERNAME: "1day"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_3 }}
   MAX_RUNTIME_MINUTES: 1
@@ -52,19 +51,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
-      - name: 3. 【shopee/营销中心/】数据库还原 (读档)
-        uses: actions/cache@v5
+      - name: 3. 【shopee/营销中心/】数据库还原 (只读读档)
+        uses: actions/cache/restore@v5 # 改为只读还原，防止干扰最后的保存
         with:
           path: ${{ env.DB_01 }}
-          key: shopee-marketing-v1
+          key: shopee-marketing-
           restore-keys: |
             shopee-marketing-
 
-      - name: 4. 【shopee/商品/】数据库还原 (读档)
-        uses: actions/cache@v5
+      - name: 4. 【shopee/商品/】数据库还原 (只读读档)
+        uses: actions/cache/restore@v5 # 改为只读还原
         with:
           path: ${{ env.DB_02 }}
-          key: shopee-product-v1
+          key: shopee-product-
           restore-keys: |
             shopee-product-
 
@@ -72,9 +71,9 @@ jobs:
         run: |
           # 检查 DB_01 (营销中心)
           if [ -d "${{ env.DB_01 }}" ] && [ "$(ls -A ${{ env.DB_01 }} 2>/dev/null)" ]; then
-            echo "✅ [DB_01] 缓存命中，跳过下载。"
+            echo "✅ [DB_01] 还原成功，跳过下载。"
           else
-            echo "⚠️ [DB_01] 缓存失效，正在下载初始数据..."
+            echo "⚠️ [DB_01] 还原失效，正在从远程同步历史数据..."
             git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-marketing temp_db_01
             mkdir -p "${{ env.DB_01 }}"
             cp -af temp_db_01/${{ env.DB_01 }}/. "${{ env.DB_01 }}/"
@@ -83,9 +82,9 @@ jobs:
 
           # 检查 DB_02 (商品)
           if [ -d "${{ env.DB_02 }}" ] && [ "$(ls -A ${{ env.DB_02 }} 2>/dev/null)" ]; then
-            echo "✅ [DB_02] 缓存命中，跳过下载。"
+            echo "✅ [DB_02] 还原成功，跳过下载。"
           else
-            echo "⚠️ [DB_02] 缓存失效，正在下载初始数据..."
+            echo "⚠️ [DB_02] 还原失效，正在从远程同步历史数据..."
             git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-product temp_db_02
             mkdir -p "${{ env.DB_02 }}"
             cp -af temp_db_02/${{ env.DB_02 }}/. "${{ env.DB_02 }}/"
@@ -108,7 +107,6 @@ jobs:
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
         run: |
           # 并行安装系统库与依赖
-          sudo apt-get install -y --no-install-recommends fonts-droid-fallback libgbm-dev -qq &
           npm ci --prefix playwright --prefer-offline --no-audit & 
           npm ci --prefix next.js --prefer-offline --no-audit &
           wait
@@ -119,3 +117,19 @@ jobs:
           
           sleep 10
           cd playwright && npm run start
+
+      # ================= 硬核回写：任务完成后强制覆盖保存最新数据 =================
+      - name: 8. 【shopee/营销中心/】强制保存最新数据库到缓存
+        if: always() # 确保即使业务脚本报错，之前的数据库更改也能被安全保存
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.DB_01 }}
+          # 附加精确到分钟的时间戳，迫使 GitHub 必须接受这个新缓存
+          key: shopee-marketing-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: 9. 【shopee/商品/】强制保存最新数据库到缓存
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.DB_02 }}
+          key: shopee-product-${{ github.run_id }}-${{ github.run_attempt }}

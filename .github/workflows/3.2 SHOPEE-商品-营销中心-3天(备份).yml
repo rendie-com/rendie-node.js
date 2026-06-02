@@ -11,8 +11,8 @@ permissions:
 
 env:   
   TZ: Asia/Shanghai
-  DB_01: "./sqlite3/shopee/营销中心" 
-  DB_02: "./sqlite3/shopee/商品"  
+  DB_01: "sqlite3/shopee/营销中心" # 修正：去掉 ./，严格对齐 3.1 生产任务的路径
+  DB_02: "sqlite3/shopee/商品"   # 修正：去掉 ./
 
 jobs:
   automation_job:
@@ -26,6 +26,7 @@ jobs:
 
       - name: 2. 【shopee/营销中心/】数据库还原 (只读模式)
         uses: actions/cache/restore@v5
+        id: cache-db01-restore
         with:
           path: ${{ env.DB_01 }}
           key: shopee-marketing-v1
@@ -34,6 +35,7 @@ jobs:
 
       - name: 3. 【shopee/商品/】数据库还原 (只读模式)
         uses: actions/cache/restore@v5
+        id: cache-db02-restore
         with:
           path: ${{ env.DB_02 }}
           key: shopee-product-v1
@@ -42,23 +44,26 @@ jobs:
 
       - name: 4. 推送数据库（备份至远程仓库）
         run: |
-          # 必须添加安全目录授权，否则跨仓库操作可能报错
           git config --global --add safe.directory "*"
-          
           ROOT_DIR=$(pwd)
+          
+          # 定义映射 "本地路径|远程备份仓库|缓存命中状态"
           SYNC_LIST=(
-            "${{ env.DB_01 }}|rendie-sqlite3-shopee-marketing"
-            "${{ env.DB_02 }}|rendie-sqlite3-shopee-product"
+            "${{ env.DB_01 }}|rendie-sqlite3-shopee-marketing|${{ steps.cache-db01-restore.outputs.cache-hit }}"
+            "${{ env.DB_02 }}|rendie-sqlite3-shopee-product|${{ steps.cache-db02-restore.outputs.cache-hit }}"
           )
 
           for item in "${SYNC_LIST[@]}"; do
             LOCAL_PATH="${item%%|*}"
-            REPO_NAME="${item##*|}"
+            REST="${item#*|}"
+            REPO_NAME="${REST%%|*}"
+            CACHE_HIT="${REST##*|}"
             
             echo "--- 开始备份: $LOCAL_PATH -> $REPO_NAME ---"
             
-            if [ ! -d "$ROOT_DIR/$LOCAL_PATH" ] || [ -z "$(ls -A $ROOT_DIR/$LOCAL_PATH 2>/dev/null)" ]; then
-              echo "⚠️ 路径 $LOCAL_PATH 为空或不存在，跳过。"
+            # 核心业务逻辑：没命中缓存，或者本地目录根本没有被还原出来，直接认定无新数据，跳过！
+            if [ "$CACHE_HIT" != "true" ] || [ ! -d "$ROOT_DIR/$LOCAL_PATH" ] || [ -z "$(ls -A $ROOT_DIR/$LOCAL_PATH 2>/dev/null)" ]; then
+              echo "ℹ️ 缓存未命中或无新数据，无需备份，直接跳过。"
               continue
             fi
 
@@ -70,7 +75,6 @@ jobs:
             mkdir -p "$TEMP_DIR/$LOCAL_PATH"
             cp -af "$ROOT_DIR/$LOCAL_PATH/." "$TEMP_DIR/$LOCAL_PATH/"
             
-            # 使用子 Shell ( ) 模式，cd 进目录执行完自动弹回，杜绝路径迷失
             (
               cd "$TEMP_DIR"
               git config user.email "action@github.com"
@@ -92,7 +96,6 @@ jobs:
       - name: 5. 任务清理：保留最新50条并删除余下旧记录
         if: always()
         run: |
-          # 获取待删除的运行ID，若无历史记录则不执行任何操作
           RUNS_TO_DELETE=$(gh run list --status completed --limit 500 --json databaseId --jq '.[].databaseId' | tail -n +51)
           if [ -n "$RUNS_TO_DELETE" ]; then
             echo "$RUNS_TO_DELETE" | xargs -I {} gh run delete {}
@@ -101,4 +104,4 @@ jobs:
             echo "ℹ️ 运行记录不足50条，无需清理。"
           fi
         env:
-          GITHUB_TOKEN: ${{ secrets.MY_PAT }} 
+          GITHUB_TOKEN: ${{ secrets.MY_PAT }}
