@@ -37,23 +37,27 @@ fi
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 
-# 5. 并行安装双端纯文本依赖 (由于干掉了 postinstall，这里绝不卡死，秒过)
 echo "📦 正在并行安装双端纯文本依赖..."
 npm ci --prefix playwright --prefer-offline --no-audit --quiet &
 npm ci --prefix next.js --prefer-offline --no-audit --quiet &
 wait
-echo "✅ 双端基础依赖包并行安装成功！"
+echo "--------------------------------------------------------"
+echo "✅ [SUCCESS] 双端基础依赖包全部安装成功！"
+echo "--------------------------------------------------------"
 
-
-# 6. 构建并启动前端
-echo "🏗️ 正在构建 Next.js 前端服务..."
+# 💡 强行让 Next.js 构建过程完全透明，不隐藏任何细节
+echo "🏗️  [PROCESS] 正在启动 Next.js 生产环境打包 (CPU 密集打包中，请稍候)..."
 npm run build --prefix next.js
+echo "--------------------------------------------------------"
+echo "✅ [SUCCESS] Next.js 核心前端编译打包完成！"
+echo "--------------------------------------------------------"
 
-echo "🚀 正在启动 Next.js 生产服务器..."
+echo "🚀 [PROCESS] 正在将 Next.js 生产服务器挂载至后台..."
 npm run start --prefix next.js & 
+
+echo "⏳ [PROCESS] 正在预留 15 秒缓冲时间，确保本地 3000 端口完全就绪..."
 sleep 15
+echo "🔥 [SUCCESS] 本地服务就绪！"
 
-
-# 7. 运行主程序（Playwright 会根据 browser.mjs 的配置，精准让 1688 走 10808 代理）
-echo "🤖 正在启动 Playwright 爬虫主程序..."
+echo "🤖 [PROCESS] 正在拉起 Playwright 爬虫主程序开始采集 1688..."
 cd playwright && npm run start
