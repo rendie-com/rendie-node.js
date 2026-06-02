@@ -64,6 +64,7 @@ export async function ensurePage() {
 
   // 【检查正确】：只要是 .js 资源或 Document 主文档发生 404/500，立刻报错打断
   state.page.on('requestfinished', async (request) => {
+    if (state.isShuttingDown) return;
     const response = await request.response();
     if (response && response.status() >= 400) {
       const errorMsg = `🚨 关键资源加载失败 [HTTP ${response.status()}]: ${request.url()}`;
@@ -76,6 +77,7 @@ export async function ensurePage() {
   });
 
   state.page.on('pageerror', async (err) => {
+    if (state.isShuttingDown) return;
     console.error(`📋 浏览器内部脚本崩溃:`, err);
     await handleFatalError('JS_CRASH');
   });
