@@ -72,27 +72,10 @@ jobs:
           restore-keys: |
             shopee-product-
 
-      - name: 5. 数据库状态检查与同步
-        run: |
-          if [ -d "${{ env.DB_01 }}" ] && [ "$(ls -A ${{ env.DB_01 }} 2>/dev/null)" ]; then
-            echo "✅ [DB_01] 历史缓存加载成功。"
-          else
-            echo "⚠️ [DB_01] 缓存为空，从远程同步历史..."
-            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-marketing temp_db_01
-            mkdir -p "${{ env.DB_01 }}"
-            cp -af temp_db_01/${{ env.DB_01 }}/. "${{ env.DB_01 }}/"
-            rm -rf temp_db_01
-          fi
-
-          if [ -d "${{ env.DB_02 }}" ] && [ "$(ls -A ${{ env.DB_02 }} 2>/dev/null)" ]; then
-            echo "✅ [DB_02] 历史缓存加载成功。"
-          else
-            echo "⚠️ [DB_02] 缓存为空，从远程同步历史..."
-            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-product temp_db_02
-            mkdir -p "${{ env.DB_02 }}"
-            cp -af temp_db_02/${{ env.DB_02 }}/. "${{ env.DB_02 }}/"
-            rm -rf temp_db_02
-          fi
+      - name: 5. 数据库状态检查与同步 (调用外部脚本)
+        env:
+          MY_PAT: ${{ secrets.MY_PAT }}
+        run: bash workflows/3/db_sync.sh
 
       - name: 6. 环境准备 (Node.js 24)
         uses: actions/setup-node@v4
@@ -103,83 +86,20 @@ jobs:
             playwright/package-lock.json
             next.js/package-lock.json
 
-      - name: 7. 构建并运行生产环境
+      - name: 7. 构建并运行生产环境 (调用外部脚本)
         env:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
-        run: |
-          npm ci --prefix playwright --prefer-offline --no-audit & 
-          npm ci --prefix next.js --prefer-offline --no-audit &
-          wait
-          
-          npm run build --prefix next.js
-          npm run start --prefix next.js & 
-          
-          sleep 10
-          cd playwright && npm run start
+        run: bash workflows/3/run_prod.sh
 
-      # ====================================================================
-      # 8. 同步备份：强制指定 shell 为 bash，移除所有易错特性，确保坚若磐石
-      # ====================================================================
-      - name: 8. 增量推送至远程备份仓库（每3天或手动强制）
+      - name: 8. 增量推送至远程备份仓库 (调用外部脚本)
         if: always() 
-        shell: bash   # <--- 极其关键：强制使用完整版 Bash 解释器
-        run: |
-          DAY_OF_YEAR=$(date +%-j)
-          FORCE_BACKUP="${{ github.event.inputs.force_backup }}"
-          
-          # 安全的原生数学运算
-          MOD_RESULT=$(( DAY_OF_YEAR % 3 ))
-          
-          if [ "$MOD_RESULT" -ne 0 ] && [ "$FORCE_BACKUP" != "true" ]; then
-            echo "ℹ️ 今天是当年第 $DAY_OF_YEAR 天，未满 3 天周期，跳过远程备份推送。"
-          else
-            echo "🚀 备份推送触发！正在处理远程数据同步..."
-            git config --global --add safe.directory "*"
-            ROOT_DIR=$(pwd)
-            
-            # 抛弃括号数组，改用最纯正的字符串遍历，彻底告别 Syntax error
-            SYNC_ITEMS="sqlite3/shopee/营销中心|rendie-sqlite3-shopee-marketing sqlite3/shopee/商品|rendie-sqlite3-shopee-product"
-            
-            for item in $SYNC_ITEMS; do
-              LOCAL_PATH="${item%%|*}"
-              REPO_NAME="${item##*|}"
-              
-              if [ ! -d "$ROOT_DIR/$LOCAL_PATH" ] || [ -z "$(ls -A "$ROOT_DIR/$LOCAL_PATH" 2>/dev/null)" ]; then
-                echo "⚠️ 路径 $LOCAL_PATH 为空，跳过备份该目录。"
-                continue
-              fi
+        env:
+          MY_PAT: ${{ secrets.MY_PAT }}
+          FORCE_BACKUP: ${{ github.event.inputs.force_backup }}
+        run: bash workflows/3/sync_backup.sh
 
-              TEMP_DIR="tmp_$REPO_NAME"
-              rm -rf "$TEMP_DIR"
-              
-              git clone --depth 1 "https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/${REPO_NAME}.git" "$TEMP_DIR"
-              
-              mkdir -p "$TEMP_DIR/$LOCAL_PATH"
-              cp -af "$ROOT_DIR/$LOCAL_PATH/." "$TEMP_DIR/$LOCAL_PATH/"
-              
-              (
-                cd "$TEMP_DIR"
-                git config user.email "action@github.com"
-                git config user.name "GitHub Action"
-                
-                if [ -n "$(git status --porcelain)" ]; then
-                  git add .
-                  git commit -m "backup-sync: $(date '+%Y%m%d-%H%M')"
-                  git push origin main
-                  echo "✅ $REPO_NAME 远程备份同步成功。"
-                else
-                  echo "ℹ️ $REPO_NAME 数据与线上一致，无变化，跳过推送。"
-                fi
-              )
-              rm -rf "$TEMP_DIR"
-            done
-          fi
-
-      # ====================================================================
-      # 9. 独立分流保存本地缓存
-      # ====================================================================
       - name: 9.1 更新【营销中心】本地缓存基准
         if: always()
         uses: actions/cache/save@v5
