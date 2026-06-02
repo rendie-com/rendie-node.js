@@ -1,44 +1,28 @@
 #!/bin/bash
 set -e
 
-# ========================================================
-# 1. 依赖安装准备阶段 (优先清理死锁隐患)
-# ========================================================
-echo "🧹 正在动态清理 playwright/package.json 中的并发死锁隐患..."
-if [ -f "playwright/package.json" ]; then
-  sed -i 's/"postinstall":.*/"postinstall": "echo skip_postinstall",/' playwright/package.json
-fi
+# === 1. 删掉了 sed 清理代码，直接串行安装（绝不卡死，代码干净） ===
+echo "📦 正在安装 Playwright 端依赖..."
+npm ci --prefix playwright --prefer-offline --no-audit --quiet
 
-# 告诉全局环境跳过任何隐式下载，彻底锁死
-export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+echo "📦 正在安装 Next.js 端依赖..."
+npm ci --prefix next.js --prefer-offline --no-audit --quiet
 
-echo "📦 正在并行安装双端纯文本依赖..."
-npm ci --prefix playwright --prefer-offline --no-audit --quiet &
-npm ci --prefix next.js --prefer-offline --no-audit --quiet &
-wait
 echo "--------------------------------------------------------"
 echo "✅ [SUCCESS] 双端基础依赖包全部安装成功！"
 echo "--------------------------------------------------------"
 
-# ========================================================
-# 2. 前端服务构建与挂载 (无网络干扰，实时吐出路由树大图)
-# ========================================================
-echo "🏗️  [PROCESS] 正在启动 Next.js 生产环境打包 (CPU 密集打包中，请稍候)..."
+# === 2. 前端服务构建与挂载 ===
+echo "🏗️  [PROCESS] 正在启动 Next.js 生产环境打包..."
 npm run build --prefix next.js
-echo "--------------------------------------------------------"
-echo "✅ [SUCCESS] Next.js 核心前端编译打包完成！"
-echo "--------------------------------------------------------"
 
 echo "🚀 [PROCESS] 正在将 Next.js 生产服务器挂载至后台..."
 npm run start --prefix next.js & 
 
-echo "⏳ [PROCESS] 正在预留 15 秒缓冲时间，确保本地 3000 端口完全就绪..."
+echo "⏳ [PROCESS] 正在预留 15 秒缓冲时间..."
 sleep 15
-echo "🔥 [SUCCESS] 本地服务就绪！"
 
-# ========================================================
-# 3. 后发制人：高空切入 Xray 安全代理隧道
-# ========================================================
+# === 3. 启动 Xray 安全代理隧道 ===
 echo "🔧 正在同步更新容器系统根证书..."
 if command -v apt-get >/dev/null 2>&1; then
   apt-get update -y && apt-get install -y ca-certificates >/dev/null 2>&1
@@ -61,8 +45,6 @@ fi
 CURRENT_IP=$(curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb || echo "未知")
 echo "✅ 节点本地 SOCKS5 转换成功！当前代理出口 IP: ${CURRENT_IP}"
 
-# ========================================================
-# 4. 终点：拉起爬虫主程序
-# ========================================================
-echo "🤖 [PROCESS] 正在拉起 Playwright 爬虫主程序开始采集 1688..."
+# === 4. 拉起爬虫 ===
+echo "🤖 [PROCESS] 正在拉起 Playwright 爬虫主程序..."
 cd playwright && npm run start
