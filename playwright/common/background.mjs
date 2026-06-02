@@ -11,7 +11,7 @@ export const background = {
         if (!p || p.isClosed()) throw new Error("页面已关闭");
 
         switch (request.action) {
-            case "isRD": return { status: 'success', data: true };
+            case "isRD": return { status: 'success', data: true }; 
             // COOKIES 模块：显式传入 p
             case "setAllCookies": return await cookies.setAllCookies(p, request.cookiesArr);
             case "delAllCookies": return await cookies.delAllCookies(p, request.urlArr);
