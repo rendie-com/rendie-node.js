@@ -11,8 +11,8 @@ permissions:
 
 env:   
   TZ: Asia/Shanghai
-  DB_01: "sqlite3/shopee/营销中心" 
-  DB_02: "sqlite3/shopee/商品"  
+  DB_01: "./sqlite3/shopee/营销中心" 
+  DB_02: "./sqlite3/shopee/商品"  
 
 jobs:
   automation_job:
