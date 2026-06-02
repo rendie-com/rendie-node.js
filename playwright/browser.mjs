@@ -57,7 +57,7 @@ export async function initBridge(page) {
     }
   });
 
-  // 🔀 前端 DOM 自定义事件监听与响应机制配置 (rendie-req-dispatch 通道)
+  // 🔀 前端 DOM 自定义事件监听与响应机制配置 (rendie-req-dispatch通道)
   await page.addInitScript(() => {
     window.addEventListener('rendie-req-dispatch', async (e) => {
       const request = e.detail;
@@ -79,9 +79,11 @@ export async function ensurePage() {
   // 📂 指定本地浏览器持久化缓存指纹目录（保存滑块验证通过后的信任资产、Cookie 及历史缓存）
   const userDataDir = path.resolve('./.rendie_chrome_profile');
   const pluginDir = path.resolve('../chrome-extension');
+  
   // 🌟 融合了工业级反指纹风控及高强跨域沙箱关闭的持久化配置选项
   const persistentOptions = {
-    headless: isCI,
+    // 🌟 关键安全修复：通过 !! 强转布尔值，彻底断绝 expected boolean 报错，完美适配本地与 GitHub 环境
+    headless: !!isCI, 
     viewport: { width: 1440, height: 900 },
     locale: 'zh-CN',
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -130,7 +132,7 @@ export async function ensurePage() {
   // 注入核心防检测及 DOM 双向消息异步调度网关
   await initBridge(state.page);
 
-  // 🚨 严格核心资源加载失败拦截器（如发现关键业务脚本因网络断连报错 400+，立即触发安全崩溃机制）
+  // 🚨 严格核心 resource 拦截器
   state.page.on('requestfinished', async (request) => {
     if (state.isShuttingDown) return;
     try {
