@@ -4,6 +4,8 @@ import { ensureBrowser, ensurePage } from './browser.mjs';
 import { handleFatalError } from './errorPage.mjs';
 import { delay, formatElapsed, checkProjectEnv, registerProcessGuards, shutdown } from './utils.mjs';
 
+// index.mjs (强化校验版)
+
 export async function initApp() {
   checkProjectEnv(envConfig);
   await ensureBrowser();
@@ -11,24 +13,43 @@ export async function initApp() {
 
   const { TARGET_URL, TEMPLATE, NODE_ACCESS_TOKEN, NODE_USERNAME } = envConfig;
 
-  // 1. 先跳转到目标地址，这样页面才有权限访问该域名的 localStorage
-  //console.log("🚀 正在前往目标页面...");
-  await state.page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: GOTO_TIMEOUT_MS });
+  // --- 1. 严格跳转校验 ---
+  const response = await state.page.goto(TARGET_URL, {
+    waitUntil: 'networkidle',
+    timeout: GOTO_TIMEOUT_MS
+  });
 
-  // 2. 页面加载后再注入数据
-  //console.log("📝 正在注入登录数据...");
-  await state.page.evaluate(({ token, user, url, tpl }) => {
+  // 逻辑：只要状态码不是 200 系列，强制报错
+  if (!response || response.status() >= 300) {
+    throw new Error(`[致命错误] 页面加载异常，HTTP状态码: ${response?.status() || '无响应'}`);
+  }
+
+  // --- 2. 严格数据注入校验 ---
+  const injectSuccess = await state.page.evaluate(({ token, user, url, tpl }) => {
     localStorage.setItem('access_token', token);
     localStorage.setItem('username', user);
     localStorage.setItem('menuList', JSON.stringify({
       top1: 1,
       top2: { 23: { name: "任务", id: "23", isbool: true, url: `${url}/iframe?template=${tpl}` } }
     }));
+    // 返回校验值：如果不等于 token，说明注入无效
+    return localStorage.getItem('access_token') === token;
   }, { token: NODE_ACCESS_TOKEN, user: NODE_USERNAME, url: TARGET_URL, tpl: TEMPLATE });
 
-  // 3. 注入数据后，刷新一下页面，使更改生效
+  if (!injectSuccess) {
+    throw new Error("[致命错误] LocalStorage 注入失败，页面可能已禁用 JS 或被反爬阻断");
+  }
+
+  // --- 3. 严格刷新校验 ---
   await state.page.reload({ waitUntil: 'networkidle' });
-  //console.log("✅ 页面加载且数据注入成功");
+
+  // 额外检查：刷新后检查 Token 是否依然存在（防止页面重定向导致数据丢失）
+  const tokenExists = await state.page.evaluate(() => !!localStorage.getItem('access_token'));
+  if (!tokenExists) {
+    throw new Error("[致命错误] 刷新页面后数据丢失，登录态无效");
+  }
+
+  console.log("✅ 严格环境检查通过，任务启动");
 }
 
 export async function runMonitor() {
