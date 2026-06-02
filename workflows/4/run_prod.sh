@@ -6,12 +6,12 @@ set -e
 #   apt-get update -y && apt-get install -y ca-certificates >/dev/null 2>&1
 # fi
 
-# echo "🔐 正在赋予 Xray 核心程序执行权限..."
-# chmod +x ./next.js/xray_bin/xray
+echo "🔐 正在赋予 Xray 核心程序执行权限..."
+chmod +x ./next.js/xray_bin/xray
 
-# echo "🚀 正在启动 Xray 代理隧道..."
-# ./next.js/xray_bin/xray run -c ./next.js/xray_bin/config.json > ./xray.log 2>&1 &
-# sleep 4
+echo "🚀 正在启动 Xray 代理隧道..."
+./next.js/xray_bin/xray run -c ./next.js/xray_bin/config.json > ./xray.log 2>&1 &
+sleep 4
 
 # echo "🔍 正在验证代理节点连通性..."
 # if ! curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb --max-time 8 > /dev/null; then
