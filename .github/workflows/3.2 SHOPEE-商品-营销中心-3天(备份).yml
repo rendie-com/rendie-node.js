@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 1
 
       - name: 2. 【shopee/营销中心/】数据库还原 (只读模式)
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.DB_01 }}
           key: shopee-marketing-v1
@@ -33,7 +33,7 @@ jobs:
             shopee-marketing-
 
       - name: 3. 【shopee/商品/】数据库还原 (只读模式)
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.DB_02 }}
           key: shopee-product-v1
