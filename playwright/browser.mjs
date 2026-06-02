@@ -8,7 +8,7 @@ export async function ensurePage() {
   const userDataDir = path.resolve('./.rendie_chrome_profile');
   const pluginDir = path.resolve('../chrome-extension');
   const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: isCI ? 'new' : false,
+    headless: isCI ? true : false,
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
     args: [
       '--no-sandbox',
