@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 cd ./next.js/xray_bin/
+chmod +x xray
 xray run -c config.json > ./xray.log 2>&1 &
 echo "🔍 正在验证代理节点连通性..."
 if ! curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb --max-time 8 > /dev/null; then
