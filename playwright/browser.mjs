@@ -92,7 +92,7 @@ export async function ensurePage() {
   const context = await state.browser.newContext({
     proxy: {
       server: 'socks5://127.0.0.1:10808',
-      bypass: 'localhost,127.0.0.1'
+      bypass: 'localhost,127.0.0.1,3000'
     },
     viewport: { width: 1440, height: 900 },
     locale: 'zh-CN',
