@@ -28,7 +28,7 @@ jobs:
         uses: actions/cache/restore@v4  # 注意这里改成了 cache/restore
         with:
           path: ${{ env.DB_01 }}
-          key: shopee-marketing-not-exists-${{ github.run_id }} # 故意给一个不存在的key
+          key: shopee-marketing-v1
           restore-keys: |
             shopee-marketing-
 
@@ -36,7 +36,7 @@ jobs:
         uses: actions/cache/restore@v4  # 注意这里改成了 cache/restore
         with:
           path: ${{ env.DB_02 }}
-          key: shopee-product-not-exists-${{ github.run_id }}
+          key: shopee-product-v1
           restore-keys: |
             shopee-product-
 

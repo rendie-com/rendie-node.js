@@ -1,4 +1,4 @@
-name: 4.1 1688-采集箱-4小时 (Cache高速版)
+name: 4.1 1688-采集箱-4小时
 
 on:
   workflow_dispatch: 
@@ -23,6 +23,8 @@ env:
 jobs:
   automation_job:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-jammy
     timeout-minutes: 80 
     steps:
       - name: 1. 下载主程序代码
@@ -75,7 +77,7 @@ jobs:
           node-version: 24
           cache: 'npm'
           cache-dependency-path: |
-            node.js/package-lock.json
+            playwright/package-lock.json
             next.js/package-lock.json
 
       - name: 7. 构建并运行生产环境
@@ -86,7 +88,7 @@ jobs:
         run: |
           # 并行安装系统库与依赖
           sudo apt-get install -y --no-install-recommends fonts-droid-fallback libgbm-dev -qq &
-          npm ci --prefix node.js --prefer-offline --no-audit &
+          npm ci --prefix playwright --prefer-offline --no-audit &
           npm ci --prefix next.js --prefer-offline --no-audit &
           wait
           
@@ -95,10 +97,4 @@ jobs:
           npm run start --prefix next.js & 
           
           sleep 10
-          cd node.js && npm run start
-
-      - name: 8. 删除【_1688/采集箱/】缓存
-        run: |
-          gh cache list --limit 100 | grep -E "1688-crawler-" | cut -f 1 | xargs -I {} gh cache delete {}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          cd playwright && npm run start
