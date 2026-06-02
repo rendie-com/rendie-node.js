@@ -3,7 +3,7 @@ set -e
 
 # 并行安装依赖
 npm ci --prefix playwright --prefer-offline --no-audit & 
-  npm ci --prefix next.js --prefer-offline --no-audit &
+npm ci --prefix next.js --prefer-offline --no-audit &
 wait
 
 # 构建并启动服务
