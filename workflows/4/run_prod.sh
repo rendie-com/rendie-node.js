@@ -6,7 +6,7 @@ if command -v apt-get >/dev/null 2>&1; then
   apt-get update -y && apt-get install -y ca-certificates >/dev/null 2>&1
 fi
 
-# 核心修改 1：动态生成 config.json，强行开启 allowInsecure: true 绕过所有证书限制
+# 核心修改：动态生成完美兼容最新版 Xray 的 config.json（剔除已废弃的 allowInsecure）
 cat << 'EOF' > ./next.js/xray_bin/config.json
 {
   "inbounds": [{
@@ -28,10 +28,12 @@ cat << 'EOF' > ./next.js/xray_bin/config.json
       "security": "tls",
       "tlsSettings": { 
         "serverName": "rendie.ccwu.cc", 
-        "fingerprint": "chrome",
-        "allowInsecure": true
+        "fingerprint": "chrome"
       },
-      "wsSettings": { "path": "/", "headers": { "Host": "rendie.ccwu.cc" } }
+      "wsSettings": { 
+        "path": "/", 
+        "headers": { "Host": "rendie.ccwu.cc" } 
+      }
     }
   }]
 }
