@@ -1,0 +1,121 @@
+name: 1. Shopee用户相关-4小时
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_backup:
+        description: '是否强制触发备份推送？(true/false)'
+        required: false
+        default: 'false'
+  schedule:
+    - cron: "0 */4 * * *" # 每 4 小时循环触发一次
+
+permissions:
+  contents: write
+  actions: write
+
+env:   
+  TZ: Asia/Shanghai
+  NODE_USERNAME: "4hour"
+  NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
+  MAX_RUNTIME_MINUTES: 1
+  TARGET_DIR: "error/task1"
+  GITHUB_TOKEN: ${{ secrets.MY_PAT }}
+  TARGET_URL: "http://localhost:3000/admin"
+  TEMPLATE: "Shopee/任务/index.js&jsFile=js02"
+  DB_01: "sqlite3/shopee/采集箱"
+  DB_02: "sqlite3/shopee/聊聊"
+
+jobs:
+  automation_job:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-jammy
+    timeout-minutes: 80 
+    steps:
+      - name: 1. 主代码基础检出
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: 2. 核心前端代码拉取
+        uses: actions/checkout@v6
+        with:
+          repository: rendie-com/rendie-next.js
+          token: ${{ secrets.MY_PAT }}
+          path: next.js
+          fetch-depth: 1
+
+      - name: Cache Next.js engine build
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.npm
+            next.js/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('next.js/**/*.{js,jsx,ts,tsx}') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: 3. 【采集箱】高速缓存上游还原 (只读模糊识别)
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.DB_01 }}
+          key: shopee-crawler-
+          restore-keys: |
+            shopee-crawler-
+
+      - name: 4. 【聊聊】高速缓存上游还原 (只读模糊识别)
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.DB_02 }}
+          key: shopee-chat-
+          restore-keys: |
+            shopee-chat-
+
+      - name: 5. 初始数据库接力与健康检测 (调用外部脚本)
+        env:
+          MY_PAT: ${{ secrets.MY_PAT }}
+        run: bash workflows/1/db_sync.sh
+
+      - name: 6. 基础宿主环境固化 (Node.js 24)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+          cache-dependency-path: |
+            playwright/package-lock.json
+            next.js/package-lock.json
+
+      - name: 7. 执行流水线并热启动生产环境 (调用外部脚本)
+        env:
+          NEXT_PUBLIC_DEFAULT_DB: "pg02" 
+          NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
+          NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
+        run: bash workflows/1/run_prod.sh
+
+      - name: 8. 周期性增量异地归档 (调用外部脚本)
+        if: always() 
+        env:
+          MY_PAT: ${{ secrets.MY_PAT }}
+          FORCE_BACKUP: ${{ github.event.inputs.force_backup }}
+        run: bash workflows/1/sync_backup.sh
+
+      - name: 9.1 更新当前【采集箱】缓存最新基准点
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.DB_01 }}
+          key: shopee-crawler-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: 9.2 更新当前【聊聊】缓存最新基准点
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.DB_02 }}
+          key: shopee-chat-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: 10. 回收过期执行历史与历史冗余缓存块 (调用外部脚本)
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_PAT }}
+        run: bash workflows/1/cleanup.sh
