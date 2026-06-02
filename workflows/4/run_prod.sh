@@ -25,19 +25,26 @@ fi
 CURRENT_IP=$(curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb || echo "未知")
 echo "✅ 节点本地 SOCKS5 转换成功！当前代理出口 IP: ${CURRENT_IP}"
 
-# === 核心修复 1：跳过 postinstall 期间的浏览器下载，彻底打破死锁 ===
-echo "📦 正在并行安装双端纯文本依赖 (隔离硬核文件锁)..."
-export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
+# === 🛠️ 【彻底根治】强行抹除 package.json 中的 postinstall 钩子 ===
+echo "🧹 正在动态清理 playwright/package.json 中的并发死锁隐患..."
+if [ -f "playwright/package.json" ]; then
+  # 使用 sed 强行把 "postinstall" 整行替换成无害的 echo，阻止它在 npm ci 时私自下载
+  sed -i 's/"postinstall":.*/"postinstall": "echo skip_postinstall",/' playwright/package.json
+fi
+
+
+echo "📦 正在并行安装双端纯文本依赖 (已物理隔离文件锁)..."
 npm ci --prefix playwright --prefer-offline --no-audit --quiet &
 npm ci --prefix next.js --prefer-offline --no-audit --quiet &
 wait
-echo "✅ 双端基础依赖包并行安装完成。"
+echo "✅ 双端基础依赖包并行安装成功！"
 
-# === 核心修复 2：在外部单线程安全、干净地安装 Chromium ===
-echo "🌐 正在单线程安全下载 Chromium 内核 (彻底绝杀卡死)..."
-unset PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD
+
+# === 🌐 在外部单线程安全环境，真正拉起 Chromium 下载 ===
+echo "🌐 正在单线程安全下载 Playwright Chromium 内核..."
 npx --prefix playwright playwright install chromium
+
 
 # 构建核心前端后台并注入启动
 echo "🏗️ 正在构建 Next.js 前端服务..."
