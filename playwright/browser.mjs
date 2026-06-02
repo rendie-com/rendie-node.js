@@ -78,7 +78,6 @@ export async function ensurePage() {
 
   // 📂 指定本地浏览器持久化缓存指纹目录（保存滑块验证通过后的信任资产、Cookie 及历史缓存）
   const userDataDir = path.resolve('./.rendie_chrome_profile');
-  const pluginDir = path.resolve('../chrome-extension');
   
   // 🌟 融合了工业级反指纹风控及高强跨域沙箱关闭的持久化配置选项
   const persistentOptions = {
@@ -100,8 +99,6 @@ export async function ensurePage() {
     // 🚀【高级防风控启动沙箱参数】
     args: [
       '--no-sandbox',
-      `--disable-extensions-except=${pluginDir}`,
-      `--load-extension=${pluginDir}`,
       '--disable-gpu',
       '--lang=zh-CN,zh;q=0.9',
       '--disable-blink-features=AutomationControlled', // 抹除底层受控特征
