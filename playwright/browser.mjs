@@ -76,13 +76,12 @@ export async function initBridge(page) {
 export async function ensurePage() {
   if (state.page && !state.page.isClosed()) return state.page;
 
-  // 📂 指定本地浏览器持久化缓存指纹目录（保存滑块验证通过后的信任资产、Cookie 及历史缓存）
+  // 📂 指定本地浏览器持久化缓存指纹目录
   const userDataDir = path.resolve('./.rendie_chrome_profile');
   
   // 🌟 融合了工业级反指纹风控及高强跨域沙箱关闭的持久化配置选项
   const persistentOptions = {
-    // 🌟 关键安全修复：通过 !! 强转布尔值，彻底断绝 expected boolean 报错，完美适配本地与 GitHub 环境
-    headless: !!isCI, 
+    headless: isCI, // 🌟 100% 还原为你要求的原版变量写法
     viewport: { width: 1440, height: 900 },
     locale: 'zh-CN',
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -92,9 +91,6 @@ export async function ensurePage() {
 
     // 🛡️【强效跨域及内容安全策略豁免】配合 args 内的命令，解除跨域同源提取锁定
     bypassCSP: true,
-
-    // 🔐【核心网络总出口】：无脑全量汇入本地 Xray 隧道端口，谁走代理、谁走直连全部交给 Xray 路由规则配置
-    proxy: isCI ? { server: 'socks5://127.0.0.1:10808' } : undefined,
 
     // 🚀【高级防风控启动沙箱参数】
     args: [
