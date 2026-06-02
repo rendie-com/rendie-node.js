@@ -43,7 +43,7 @@ jobs:
 
       # 使用固定 Key 实现“无限接力上一次”的滚动更新
       - name: 3. 数据库高速缓存还原 (DB_01)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.DB_01 }}
           key: shopee-crawler-v1
@@ -51,7 +51,7 @@ jobs:
             shopee-crawler-
 
       - name: 4. 数据库高速缓存还原 (DB_02)
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ${{ env.DB_02 }}
           key: shopee-chat-v1
