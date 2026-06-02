@@ -7,6 +7,7 @@ node_modules/
 # 业务输出与备份（你已有的）
 帮助/
 error/
+.rendie_chrome_profile/
 
 # 浏览器相关缓存（新增：必带）
 .cache/
