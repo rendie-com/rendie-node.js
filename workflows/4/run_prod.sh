@@ -1,34 +1,34 @@
 #!/bin/bash
 set -e
 
-echo "🔧 正在同步更新容器系统根证书..."
-if command -v apt-get >/dev/null 2>&1; then
-  apt-get update -y && apt-get install -y ca-certificates >/dev/null 2>&1
-fi
+# echo "🔧 正在同步更新容器系统根证书..."
+# if command -v apt-get >/dev/null 2>&1; then
+#   apt-get update -y && apt-get install -y ca-certificates >/dev/null 2>&1
+# fi
 
-echo "🔐 正在赋予 Xray 核心程序执行权限..."
-chmod +x ./next.js/xray_bin/xray
+# echo "🔐 正在赋予 Xray 核心程序执行权限..."
+# chmod +x ./next.js/xray_bin/xray
 
-echo "🚀 正在启动 Xray 代理隧道..."
-./next.js/xray_bin/xray run -c ./next.js/xray_bin/config.json > ./xray.log 2>&1 &
-sleep 4
+# echo "🚀 正在启动 Xray 代理隧道..."
+# ./next.js/xray_bin/xray run -c ./next.js/xray_bin/config.json > ./xray.log 2>&1 &
+# sleep 4
 
-echo "🔍 正在验证代理节点连通性..."
-if ! curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb --max-time 8 > /dev/null; then
-  echo "🚨 [致命错误] Xray 隧道建立失败！"
-  echo "------------------ 📋 以下为 Xray 核心崩溃日志 ------------------"
-  cat ./xray.log
-  echo "---------------------------------------------------------------"
-  exit 1
-fi
+# echo "🔍 正在验证代理节点连通性..."
+# if ! curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb --max-time 8 > /dev/null; then
+#   echo "🚨 [致命错误] Xray 隧道建立失败！"
+#   echo "------------------ 📋 以下为 Xray 核心崩溃日志 ------------------"
+#   cat ./xray.log
+#   echo "---------------------------------------------------------------"
+#   exit 1
+# fi
 
-CURRENT_IP=$(curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb || echo "未知")
-echo "✅ 节点本地 SOCKS5 转换成功！当前代理出口 IP: ${CURRENT_IP}"
+# CURRENT_IP=$(curl -s --socks5-hostname 127.0.0.1:10808 https://ip.sb || echo "未知")
+# echo "✅ 节点本地 SOCKS5 转换成功！当前代理出口 IP: ${CURRENT_IP}"
 
-echo "🧹 正在动态清理 playwright/package.json 中的并发死锁隐患..."
-if [ -f "playwright/package.json" ]; then
-  sed -i 's/"postinstall":.*/"postinstall": "echo skip_postinstall",/' playwright/package.json
-fi
+# echo "🧹 正在动态清理 playwright/package.json 中的并发死锁隐患..."
+# if [ -f "playwright/package.json" ]; then
+#   sed -i 's/"postinstall":.*/"postinstall": "echo skip_postinstall",/' playwright/package.json
+# fi
 
 echo "📦 正在并行安装双端纯文本依赖..."
 npm ci --prefix playwright --prefer-offline --no-audit --quiet &
