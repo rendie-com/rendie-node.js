@@ -11,8 +11,8 @@ permissions:
 
 env:   
   TZ: Asia/Shanghai
-  DB_01: "./sqlite3/shopee/营销中心"
-  DB_02: "./sqlite3/shopee/商品"
+  DB_01: "sqlite3/shopee/营销中心" 
+  DB_02: "sqlite3/shopee/商品"  
 
 jobs:
   automation_job:
@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 1
 
       - name: 2. 【shopee/营销中心/】数据库还原 (只读模式)
-        uses: actions/cache/restore@v4  # 注意这里改成了 cache/restore
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.DB_01 }}
           key: shopee-marketing-v1
@@ -33,7 +33,7 @@ jobs:
             shopee-marketing-
 
       - name: 3. 【shopee/商品/】数据库还原 (只读模式)
-        uses: actions/cache/restore@v4  # 注意这里改成了 cache/restore
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.DB_02 }}
           key: shopee-product-v1
@@ -42,7 +42,10 @@ jobs:
 
       - name: 4. 推送数据库（备份至远程仓库）
         run: |
-          # 定义需要同步的映射 "本地目录|远程仓库名"
+          # 必须添加安全目录授权，否则跨仓库操作可能报错
+          git config --global --add safe.directory "*"
+          
+          ROOT_DIR=$(pwd)
           SYNC_LIST=(
             "${{ env.DB_01 }}|rendie-sqlite3-shopee-marketing"
             "${{ env.DB_02 }}|rendie-sqlite3-shopee-product"
@@ -54,38 +57,48 @@ jobs:
             
             echo "--- 开始备份: $LOCAL_PATH -> $REPO_NAME ---"
             
-            if [ ! -d "$LOCAL_PATH" ] || [ -z "$(ls -A $LOCAL_PATH 2>/dev/null)" ]; then
-              echo "⚠️ 路径 $LOCAL_PATH 为空，跳过。"
+            if [ ! -d "$ROOT_DIR/$LOCAL_PATH" ] || [ -z "$(ls -A $ROOT_DIR/$LOCAL_PATH 2>/dev/null)" ]; then
+              echo "⚠️ 路径 $LOCAL_PATH 为空或不存在，跳过。"
               continue
             fi
 
-            # 修正点：克隆到以仓库名命名的目录，避免第二次循环冲突
-            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/${REPO_NAME}.git "tmp_$REPO_NAME"
+            TEMP_DIR="tmp_$REPO_NAME"
+            rm -rf "$TEMP_DIR"
             
-            mkdir -p "tmp_$REPO_NAME/$LOCAL_PATH"
-            cp -af "$LOCAL_PATH/." "tmp_$REPO_NAME/$LOCAL_PATH/"
+            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/${REPO_NAME}.git "$TEMP_DIR"
             
-            cd "tmp_$REPO_NAME"
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
+            mkdir -p "$TEMP_DIR/$LOCAL_PATH"
+            cp -af "$ROOT_DIR/$LOCAL_PATH/." "$TEMP_DIR/$LOCAL_PATH/"
             
-            if [ -n "$(git status --porcelain)" ]; then
-              git add .
-              git commit -m "backup-sync: $(date '+%Y%m%d-%H%M')"
-              git push origin main
-              echo "✅ 推送成功。"
-            else
-              echo "ℹ️ 数据无变化，跳过推送。"
-            fi
+            # 使用子 Shell ( ) 模式，cd 进目录执行完自动弹回，杜绝路径迷失
+            (
+              cd "$TEMP_DIR"
+              git config user.email "action@github.com"
+              git config user.name "GitHub Action"
+              
+              if [ -n "$(git status --porcelain)" ]; then
+                git add .
+                git commit -m "backup-sync: $(date '+%Y%m%d-%H%M')"
+                git push origin main
+                echo "✅ $REPO_NAME 推送成功。"
+              else
+                echo "ℹ️ $REPO_NAME 数据无变化，跳过推送。"
+              fi
+            )
             
-            cd ..
+            rm -rf "$TEMP_DIR"
           done
 
       - name: 5. 任务清理：保留最新50条并删除余下旧记录
         if: always()
         run: |
-          gh run list --status completed --limit 500 --json databaseId --jq '.[].databaseId' \
-            | tail -n +51 \
-            | xargs -I {} gh run delete {}
+          # 获取待删除的运行ID，若无历史记录则不执行任何操作
+          RUNS_TO_DELETE=$(gh run list --status completed --limit 500 --json databaseId --jq '.[].databaseId' | tail -n +51)
+          if [ -n "$RUNS_TO_DELETE" ]; then
+            echo "$RUNS_TO_DELETE" | xargs -I {} gh run delete {}
+            echo "✅ 历史运行记录清理完毕。"
+          else
+            echo "ℹ️ 运行记录不足50条，无需清理。"
+          fi
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.MY_PAT }} 

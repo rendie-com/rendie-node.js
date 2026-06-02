@@ -19,8 +19,8 @@ env:
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   TARGET_URL: "http://localhost:3000/admin"
   TEMPLATE: "Shopee/任务/index.js&jsFile=js02"
-  DB_01: "./sqlite3/shopee/营销中心"
-  DB_02: "./sqlite3/shopee/商品"
+  DB_01: "sqlite3/shopee/营销中心"
+  DB_02: "sqlite3/shopee/商品"
 
 jobs:
   automation_job:
@@ -76,8 +76,8 @@ jobs:
           else
             echo "⚠️ [DB_01] 缓存失效，正在下载初始数据..."
             git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-marketing temp_db_01
-            mkdir -p ${{ env.DB_01 }}
-            cp -af temp_db_01/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
+            mkdir -p "${{ env.DB_01 }}"
+            cp -af temp_db_01/${{ env.DB_01 }}/. "${{ env.DB_01 }}/"
             rm -rf temp_db_01
           fi
 
@@ -87,8 +87,8 @@ jobs:
           else
             echo "⚠️ [DB_02] 缓存失效，正在下载初始数据..."
             git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-product temp_db_02
-            mkdir -p ${{ env.DB_02 }}
-            cp -af temp_db_02/${{ env.DB_02 }}/. ${{ env.DB_02 }}/
+            mkdir -p "${{ env.DB_02 }}"
+            cp -af temp_db_02/${{ env.DB_02 }}/. "${{ env.DB_02 }}/"
             rm -rf temp_db_02
           fi
 
@@ -101,7 +101,7 @@ jobs:
             playwright/package-lock.json
             next.js/package-lock.json
 
-      - name: 7. 构建并运行生产 environment
+      - name: 7. 构建并运行生产环境
         env:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
@@ -118,4 +118,4 @@ jobs:
           npm run start --prefix next.js & 
           
           sleep 10
-          cd playwright && npm run start  
+          cd playwright && npm run start

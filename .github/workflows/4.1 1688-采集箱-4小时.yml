@@ -18,7 +18,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   TEMPLATE: "1688/定时任务/index.js&jsFile=02"
   TARGET_URL: "http://localhost:3000/admin"
-  DB_01: "./sqlite3/_1688/采集箱"
+  DB_01: "sqlite3/_1688/采集箱" 
 
 jobs:
   automation_job:
@@ -54,7 +54,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ${{ env.DB_01 }}
-          key: 1688-crawler-${{ github.run_id }}
+          key: 1688-crawler-v1
           restore-keys: |
             1688-crawler-
 
@@ -66,8 +66,8 @@ jobs:
           else
             echo "⚠️ [DB_01] 缓存失效，正在下载初始数据..."
             git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-1688-crawler temp_db_01
-            mkdir -p ${{ env.DB_01 }}
-            cp -af temp_db_01/${{ env.DB_01 }}/. ${{ env.DB_01 }}/
+            mkdir -p "${{ env.DB_01 }}"
+            cp -af temp_db_01/${{ env.DB_01 }}/. "${{ env.DB_01 }}/"
             rm -rf temp_db_01
           fi
 
