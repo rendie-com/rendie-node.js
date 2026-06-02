@@ -6,39 +6,6 @@ if command -v apt-get >/dev/null 2>&1; then
   apt-get update -y && apt-get install -y ca-certificates >/dev/null 2>&1
 fi
 
-# 核心修改：动态生成完美兼容最新版 Xray 的 config.json（剔除已废弃的 allowInsecure）
-cat << 'EOF' > ./next.js/xray_bin/config.json
-{
-  "inbounds": [{
-    "port": 10808,
-    "protocol": "socks",
-    "settings": { "auth": "noauth", "udp": true }
-  }],
-  "outbounds": [{
-    "protocol": "vless",
-    "settings": {
-      "vnext": [{
-        "address": "188.164.248.3",
-        "port": 2087,
-        "users": [{ "id": "899014a9-64db-480e-8fc7-287b79c8694d", "encryption": "none" }]
-      }]
-    },
-    "streamSettings": {
-      "network": "ws",
-      "security": "tls",
-      "tlsSettings": { 
-        "serverName": "rendie.ccwu.cc", 
-        "fingerprint": "chrome"
-      },
-      "wsSettings": { 
-        "path": "/", 
-        "headers": { "Host": "rendie.ccwu.cc" } 
-      }
-    }
-  }]
-}
-EOF
-
 echo "🔐 正在赋予 Xray 核心程序执行权限..."
 chmod +x ./next.js/xray_bin/xray
 
