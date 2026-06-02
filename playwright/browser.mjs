@@ -9,12 +9,23 @@ export async function ensureBrowser() {
 
   const launchOptions = {
     headless: isCI,
+    // 关键过检测：1688 极度看重 Chromium 启动参数
     args: [
       '--no-sandbox',
       '--disable-gpu',
-      '--lang=zh-CN',
+      '--lang=zh-CN,zh;q=0.9',
+      // 抹除自动化受控标记
       '--disable-blink-features=AutomationControlled',
-      ...(isCI ? ['--disable-dev-shm-usage', '--disable-setuid-sandbox'] : ['--start-maximized'])
+      // 禁用各种暴露自动化痕迹的扩展和功能
+      '--disable-infobars',
+      '--no-default-browser-check',
+      // 防止 Linux / Docker 环境下特有的无头特征泄露
+      ...(isCI ? [
+        '--disable-dev-shm-usage', 
+        '--disable-setuid-sandbox',
+        '--hide-scrollbars',
+        '--mute-audio'
+      ] : ['--start-maximized'])
     ]
   };
 
@@ -23,11 +34,35 @@ export async function ensureBrowser() {
 }
 
 export async function initBridge(page) {
+  // 核心过检测注入：完美伪装正常 window 属性，防止 1688 爬虫检测脚本
   await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-    window.navigator.chrome = { runtime: {} };
+    // 1. 抹除 webdriver 痕迹
+    const newProto = Object.create(Navigator.prototype);
+    Object.defineProperty(newProto, 'webdriver', { get: () => undefined });
+    Object.setPrototypeOf(navigator, newProto);
+
+    // 2. 伪装 Chrome 插件与运行环境（1688 重点扫描项）
+    window.chrome = {
+      runtime: {},
+      loadTimes: function() {},
+      csi: function() {},
+      app: {}
+    };
+
+    // 3. 伪装语言和插件列表，防止 headless 特征暴露
+    Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh', 'en'] });
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+
+    // 4. 伪装 WebGL 渲染器（防止1688通过硬件指纹识破云端 Linux 服务器）
+    const getParameter = WebGLRenderingContext.prototype.getParameter;
+    WebGLRenderingContext.prototype.getParameter = function(parameter) {
+      if (parameter === 37445) return 'Intel Open Source Technology Center';
+      if (parameter === 37446) return 'Mesa Aegean';
+      return getParameter.apply(this, arguments);
+    };
   });
 
+  // 内部桥接通信逻辑保持不变
   await page.exposeFunction('nodeBridge', async (request) => {
     try {
       const result = await background.a01(request);
@@ -53,31 +88,39 @@ export async function ensurePage() {
   if (state.page && !state.page.isClosed()) return state.page;
   if (!state.browser || !state.browser.isConnected()) await ensureBrowser();
 
+  // 关键过检测：从上下文抹除 Playwright 默认的标志
   const context = await state.browser.newContext({
-    viewport: isCI ? { width: 1280, height: 720 } : null,
+    // 模拟真实的 Windows 10 Chrome 环境，防止 1688 察觉是 Linux 容器
+    viewport: { width: 1440, height: 900 },
     locale: 'zh-CN',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    deviceScaleFactor: 1,
+    hasTouch: false,
+    isMobile: false
   });
 
   state.page = await context.newPage();
   await initBridge(state.page);
 
-  // 【检查正确】：只要是 .js 资源或 Document 主文档发生 404/500，立刻报错打断
+  // 严格资源报错拦截
   state.page.on('requestfinished', async (request) => {
     if (state.isShuttingDown) return;
-    const response = await request.response();
-    if (response && response.status() >= 400) {
-      const errorMsg = `🚨 关键资源加载失败 [HTTP ${response.status()}]: ${request.url()}`;
-      console.error(errorMsg);
-      if (request.url().endsWith('.js') || request.resourceType() === 'document') {
-        state.isShuttingDown = true; // 强制破坏外部 while 循环
-        await handleFatalError('NET_FAIL_DOCUMENT');
+    try {
+      const response = await request.response();
+      if (response && typeof response.status === 'function') {
+        const statusCode = response.status();
+        if (statusCode >= 400) {
+          if (request.url().endsWith('.js') || request.resourceType() === 'document') {
+            console.error(`🚨 资源拦截器发现核心文件加载失败 [HTTP ${statusCode}]: ${request.url()}`);
+            state.isShuttingDown = true; 
+            await handleFatalError('NET_FAIL_DOCUMENT');
+          }
+        }
       }
-    }
+    } catch (e) {}
   });
 
   state.page.on('pageerror', async (err) => {
-    if (state.isShuttingDown) return;
     console.error(`📋 浏览器内部脚本崩溃:`, err);
     await handleFatalError('JS_CRASH');
   });
