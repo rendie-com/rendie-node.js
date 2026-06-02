@@ -11,8 +11,6 @@ export async function initApp() {
 
   const { TARGET_URL, TEMPLATE, NODE_ACCESS_TOKEN, NODE_USERNAME } = envConfig;
 
-  // 【核心修复】：必须先让页面前往目标地址！
-  // 此时 browser.mjs 里的 404 监听器、崩溃监听器已经在后台全部开始工作了
   await state.page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: GOTO_TIMEOUT_MS });
 
   // 页面主结构加载后，直接注入数据

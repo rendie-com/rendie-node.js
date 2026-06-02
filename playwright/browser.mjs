@@ -3,41 +3,7 @@ import { chromium } from 'playwright';
 import { state, isCI } from './config.mjs';
 import { handleFatalError } from './errorPage.mjs';
 import { background } from './common/background.mjs';
-
-export async function ensureBrowser() {
-  if (state.browser && state.browser.isConnected()) return state.browser;
-
-  const launchOptions = {
-    headless: isCI,
-    // 关键过检测：1688 极度看重 Chromium 启动参数
-    args: [
-      '--no-sandbox',
-      '--disable-gpu',
-      '--lang=zh-CN,zh;q=0.9',
-      // 抹除自动化受控标记
-      '--disable-blink-features=AutomationControlled',
-      // 禁用各种暴露自动化痕迹的扩展和功能
-      '--disable-infobars',
-      '--no-default-browser-check',
-      
-      // 🌟【新增】工业级跨域豁免核心参数：彻底摧毁浏览器的同源安全沙箱限制
-      '--disable-web-security',
-      '--disable-features=IsolateOrigins,site-per-process',
-      '--disable-site-isolation-trials',
-
-      // 防止 Linux / Docker 环境下特有的无头特征泄露
-      ...(isCI ? [
-        '--disable-dev-shm-usage',
-        '--disable-setuid-sandbox',
-        '--hide-scrollbars',
-        '--mute-audio'
-      ] : ['--start-maximized'])
-    ]
-  };
-
-  state.browser = await chromium.launch(launchOptions);
-  return state.browser;
-}
+import path from 'path';
 
 export async function initBridge(page) {
   // 核心过检测注入：完美伪装正常 window 属性，防止 1688 爬虫检测脚本
@@ -58,6 +24,7 @@ export async function initBridge(page) {
     // 3. 伪装语言和插件列表，防止 headless 特征暴露
     Object.defineProperty(navigator, 'languages', { get: () => ['zh-CN', 'zh', 'en'] });
     Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
 
     // 4. 伪装 WebGL 渲染器（防止1688通过硬件指纹识破云端 Linux 服务器）
     const getParameter = WebGLRenderingContext.prototype.getParameter;
@@ -66,9 +33,14 @@ export async function initBridge(page) {
       if (parameter === 37446) return 'Mesa Aegean';
       return getParameter.apply(this, arguments);
     };
+
+    // 5. 动态干掉 playwright 暴露在全局的敏感内部变量
+    delete window.__playwright;
+    delete window.__webdriver_evaluate;
+    delete window.__selenium_evaluate;
   });
 
-  // 内部桥接通信 logic
+  // 内部桥接通信逻辑保持不变
   await page.exposeFunction('nodeBridge', async (request) => {
     try {
       const result = await background.a01(request);
@@ -92,14 +64,13 @@ export async function initBridge(page) {
 
 export async function ensurePage() {
   if (state.page && !state.page.isClosed()) return state.page;
-  if (!state.browser || !state.browser.isConnected()) await ensureBrowser();
 
-  // 关键过检测：从上下文抹除 Playwright 默认的标志
-  const context = await state.browser.newContext({
-    proxy: {
-      server: 'socks5://127.0.0.1:10808',
-      bypass: 'localhost,127.0.0.1,3000'
-    },
+  // 💡 【核心重构】：指定本地缓存指纹目录，不再每次都使用“纯净无痕模式”
+  const userDataDir = path.resolve('./.rendie_chrome_profile');
+
+  // 🌟 将原本 launch 的 args 与 context 的选项在持久化模式下进行大融合
+  const persistentOptions = {
+    headless: isCI,
     viewport: { width: 1440, height: 900 },
     locale: 'zh-CN',
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -107,12 +78,46 @@ export async function ensurePage() {
     hasTouch: false,
     isMobile: false,
 
-    // 🌟【新增关键开关】Bypass Content Security Policy (内容安全策略豁免)
-    // 允许我们在当前页面上下文（无论是 about:blank 还是 localhost）中，任意通过 window.fetch 跨域调用 1688 的接口
-    bypassCSP: true
-  });
+    // 🛡️【跨域豁免核心开关】配合 args 里的 web-security，彻底解开 window.fetch 的 Failed 锁
+    bypassCSP: true,
 
-  state.page = await context.newPage();
+    // 🔐【安全代理挂载】
+    proxy: {
+      server: 'socks5://127.0.0.1:10808',
+      bypass: 'localhost,127.0.0.1,3000'
+    },
+
+    // 🚀【高级过检启动参数】
+    args: [
+      '--no-sandbox',
+      '--disable-gpu',
+      '--lang=zh-CN,zh;q=0.9',
+      '--disable-blink-features=AutomationControlled', // 抹除自动化控制特征
+      '--disable-infobars',
+      '--no-default-browser-check',
+      
+      // 🌟【强效跨域沙箱关闭】
+      '--disable-web-security',
+      '--disable-features=IsolateOrigins,site-per-process',
+      '--disable-site-isolation-trials',
+
+      ...(isCI ? [
+        '--disable-dev-shm-usage',
+        '--disable-setuid-sandbox',
+        '--hide-scrollbars',
+        '--mute-audio'
+      ] : ['--start-maximized'])
+    ]
+  };
+
+  // 💡 启动或接管带有持久化指纹的独立浏览器环境（这里无需单独 chromium.launch）
+  const context = await chromium.launchPersistentContext(userDataDir, persistentOptions);
+  
+  // 提取首个默认页面，避免 launchPersistentContext 默认多开一个空白页
+  const pages = context.pages();
+  state.page = pages.length > 0 ? pages[0] : await context.newPage();
+
+  // 执行核心过检桥接注入
   await initBridge(state.page);
 
   // 严格资源报错拦截
@@ -139,4 +144,9 @@ export async function ensurePage() {
   });
 
   return state.page;
+}
+
+// 保持向下兼容导出一个空的 ensureBrowser 占位，防止 index.mjs 报错
+export async function ensureBrowser() {
+  return state.browser;
 }

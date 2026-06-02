@@ -1,0 +1,11 @@
+2026/06/02-20:32:19.087 70c Creating DB D:\project\vscode\node.js\playwright\.rendie_chrome_profile\Default\Local Storage\leveldb since it was missing.
+2026/06/02-20:32:19.109 70c Reusing MANIFEST D:\project\vscode\node.js\playwright\.rendie_chrome_profile\Default\Local Storage\leveldb/MANIFEST-000001
+2026/06/02-20:33:14.279 504c Level-0 table #5: started
+2026/06/02-20:33:14.286 504c Level-0 table #5: 85292 bytes OK
+2026/06/02-20:33:14.289 504c Delete type=0 #3
+2026/06/02-20:33:19.125 504c Level-0 table #7: started
+2026/06/02-20:33:19.131 504c Level-0 table #7: 328383 bytes OK
+2026/06/02-20:33:19.133 504c Delete type=0 #4
+2026/06/02-20:34:36.008 504c Level-0 table #9: started
+2026/06/02-20:34:36.016 504c Level-0 table #9: 85502 bytes OK
+2026/06/02-20:34:36.018 504c Delete type=0 #6
