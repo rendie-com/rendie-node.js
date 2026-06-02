@@ -1,5 +1,9 @@
 #!/bin/bash
 set -e
+# 3. 后台启动 Xray 隧道
+./next.js/xray_bin/xray run -c ./next.js/xray_bin/config.json > /dev/null 2>&1 &
+sleep 3
+echo "✅ 节点本地 SOCKS5 转换成功！"
 
 # 并行冷启动依赖安装，最大化压榨集群性能
 npm ci --prefix playwright --prefer-offline --no-audit --quiet &

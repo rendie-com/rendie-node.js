@@ -21,7 +21,7 @@ export async function ensureBrowser() {
       '--no-default-browser-check',
       // 防止 Linux / Docker 环境下特有的无头特征泄露
       ...(isCI ? [
-        '--disable-dev-shm-usage', 
+        '--disable-dev-shm-usage',
         '--disable-setuid-sandbox',
         '--hide-scrollbars',
         '--mute-audio'
@@ -44,8 +44,8 @@ export async function initBridge(page) {
     // 2. 伪装 Chrome 插件与运行环境（1688 重点扫描项）
     window.chrome = {
       runtime: {},
-      loadTimes: function() {},
-      csi: function() {},
+      loadTimes: function () { },
+      csi: function () { },
       app: {}
     };
 
@@ -55,7 +55,7 @@ export async function initBridge(page) {
 
     // 4. 伪装 WebGL 渲染器（防止1688通过硬件指纹识破云端 Linux 服务器）
     const getParameter = WebGLRenderingContext.prototype.getParameter;
-    WebGLRenderingContext.prototype.getParameter = function(parameter) {
+    WebGLRenderingContext.prototype.getParameter = function (parameter) {
       if (parameter === 37445) return 'Intel Open Source Technology Center';
       if (parameter === 37446) return 'Mesa Aegean';
       return getParameter.apply(this, arguments);
@@ -90,7 +90,9 @@ export async function ensurePage() {
 
   // 关键过检测：从上下文抹除 Playwright 默认的标志
   const context = await state.browser.newContext({
-    // 模拟真实的 Windows 10 Chrome 环境，防止 1688 察觉是 Linux 容器
+    proxy: {
+      server: 'socks5://127.0.0.1:10808'
+    },
     viewport: { width: 1440, height: 900 },
     locale: 'zh-CN',
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -112,12 +114,12 @@ export async function ensurePage() {
         if (statusCode >= 400) {
           if (request.url().endsWith('.js') || request.resourceType() === 'document') {
             console.error(`🚨 资源拦截器发现核心文件加载失败 [HTTP ${statusCode}]: ${request.url()}`);
-            state.isShuttingDown = true; 
+            state.isShuttingDown = true;
             await handleFatalError('NET_FAIL_DOCUMENT');
           }
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   });
 
   state.page.on('pageerror', async (err) => {
