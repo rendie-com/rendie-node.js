@@ -1,9 +1,14 @@
-name: 3.1 SHOPEE-商品-营销中心-1天
+name: 3.0 SHOPEE-商品-营销中心-一体化流水线
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
+    inputs:
+      force_backup:
+        description: '是否强制触发备份推送？(true/false)'
+        required: false
+        default: 'false'
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "0 0 * * *" # 每天凌晨 00:00 准时自动启动
 
 permissions:
   contents: write
@@ -22,7 +27,7 @@ env:
   DB_02: "sqlite3/shopee/商品"
 
 jobs:
-  automation_job:
+  automation_and_backup:
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-jammy
@@ -51,16 +56,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
 
-      - name: 3. 【shopee/营销中心/】数据库还原 (只读读档)
-        uses: actions/cache/restore@v5 # 改为只读还原，防止干扰最后的保存
+      - name: 3. 【shopee/营销中心/】数据库历史还原 (只读模糊匹配上次缓存)
+        uses: actions/cache/restore@v5
         with:
           path: ${{ env.DB_01 }}
           key: shopee-marketing-
           restore-keys: |
             shopee-marketing-
 
-      - name: 4. 【shopee/商品/】数据库还原 (只读读档)
-        uses: actions/cache/restore@v5 # 改为只读还原
+      - name: 4. 【shopee/商品/】数据库历史还原 (只读模糊匹配上次缓存)
+        uses: actions/cache/restore@v5
         with:
           path: ${{ env.DB_02 }}
           key: shopee-product-
@@ -69,22 +74,20 @@ jobs:
 
       - name: 5. 数据库状态检查与同步
         run: |
-          # 检查 DB_01 (营销中心)
           if [ -d "${{ env.DB_01 }}" ] && [ "$(ls -A ${{ env.DB_01 }} 2>/dev/null)" ]; then
-            echo "✅ [DB_01] 还原成功，跳过下载。"
+            echo "✅ [DB_01] 历史缓存加载成功。"
           else
-            echo "⚠️ [DB_01] 还原失效，正在从远程同步历史数据..."
+            echo "⚠️ [DB_01] 缓存为空，从远程同步历史..."
             git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-marketing temp_db_01
             mkdir -p "${{ env.DB_01 }}"
             cp -af temp_db_01/${{ env.DB_01 }}/. "${{ env.DB_01 }}/"
             rm -rf temp_db_01
           fi
 
-          # 检查 DB_02 (商品)
           if [ -d "${{ env.DB_02 }}" ] && [ "$(ls -A ${{ env.DB_02 }} 2>/dev/null)" ]; then
-            echo "✅ [DB_02] 还原成功，跳过下载。"
+            echo "✅ [DB_02] 历史缓存加载成功。"
           else
-            echo "⚠️ [DB_02] 还原失效，正在从远程同步历史数据..."
+            echo "⚠️ [DB_02] 缓存为空，从远程同步历史..."
             git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/rendie-sqlite3-shopee-product temp_db_02
             mkdir -p "${{ env.DB_02 }}"
             cp -af temp_db_02/${{ env.DB_02 }}/. "${{ env.DB_02 }}/"
@@ -106,30 +109,97 @@ jobs:
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
         run: |
-          # 并行安装系统库与依赖
           npm ci --prefix playwright --prefer-offline --no-audit & 
           npm ci --prefix next.js --prefer-offline --no-audit &
           wait
           
-          # 构建与启动
           npm run build --prefix next.js
           npm run start --prefix next.js & 
           
           sleep 10
           cd playwright && npm run start
 
-      # ================= 硬核回写：任务完成后强制覆盖保存最新数据 =================
-      - name: 8. 【shopee/营销中心/】强制保存最新数据库到缓存
-        if: always() # 确保即使业务脚本报错，之前的数据库更改也能被安全保存
+      # ====================================================================
+      # 8. 同步备份：原地直接判断并推送
+      # ====================================================================
+      - name: 8. 增量推送至远程备份仓库（每3天或手动强制）
+        if: always() 
+        run: |
+          DAY_OF_YEAR=$(date +%-j)
+          FORCE_BACKUP="${{ github.event.inputs.force_backup }}"
+          
+          if [ $((DAY_OF_YEAR % 3)) -ne 0 ] && [ "$FORCE_BACKUP" != "true" ]; then
+            echo "ℹ️ 今天是当年第 $DAY_OF_YEAR 天，不满足 3 天周期，跳过远程备份推送。"
+            exit 0
+          fi
+          
+          echo "🚀 备份推送触发！正在处理远程数据同步..."
+          git config --global --add safe.directory "*"
+          ROOT_DIR=$(pwd)
+          
+          SYNC_LIST=(
+            "${{ env.DB_01 }}|rendie-sqlite3-shopee-marketing"
+            "${{ env.DB_02 }}|rendie-sqlite3-shopee-product"
+          )
+
+          for item in "${SYNC_LIST[@]}"; do
+            LOCAL_PATH="${item%%|*}"
+            REPO_NAME="${item##*|}"
+            
+            if [ ! -d "$ROOT_DIR/$LOCAL_PATH" ] || [ -z "$(ls -A $ROOT_DIR/$LOCAL_PATH 2>/dev/null)" ]; then
+              echo "⚠️ 路径 $LOCAL_PATH 为空，跳过备份该目录。"
+              continue
+            fi
+
+            TEMP_DIR="tmp_$REPO_NAME"
+            rm -rf "$TEMP_DIR"
+            
+            git clone --depth 1 https://x-access-token:${{ secrets.MY_PAT }}@github.com/rendie-com/${REPO_NAME}.git "$TEMP_DIR"
+            
+            mkdir -p "$TEMP_DIR/$LOCAL_PATH"
+            cp -af "$ROOT_DIR/$LOCAL_PATH/." "$TEMP_DIR/$LOCAL_PATH/"
+            
+            (
+              cd "$TEMP_DIR"
+              git config user.email "action@github.com"
+              git config user.name "GitHub Action"
+              
+              if [ -n "$(git status --porcelain)" ]; then
+                git add .
+                git commit -m "backup-sync: $(date '+%Y%m%d-%H%M')"
+                git push origin main
+                echo "✅ $REPO_NAME 远程备份同步成功。"
+              else
+                echo "ℹ️ $REPO_NAME 数据与线上一致，无变化，跳过推送。"
+              fi
+            )
+            rm -rf "$TEMP_DIR"
+          done
+
+      # ====================================================================
+      # 9. 独立分流保存：彻底修复漏写商品库（DB_02）的致命问题
+      # ====================================================================
+      - name: 9.1 更新【营销中心】本地缓存基准
+        if: always()
         uses: actions/cache/save@v5
         with:
           path: ${{ env.DB_01 }}
-          # 附加精确到分钟的时间戳，迫使 GitHub 必须接受这个新缓存
           key: shopee-marketing-${{ github.run_id }}-${{ github.run_attempt }}
 
-      - name: 9. 【shopee/商品/】强制保存最新数据库到缓存
+      - name: 9.2 更新【商品】本地缓存基准
         if: always()
         uses: actions/cache/save@v5
         with:
           path: ${{ env.DB_02 }}
           key: shopee-product-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: 10. 自动清理历史运行记录
+        if: always()
+        run: |
+          RUNS_TO_DELETE=$(gh run list --status completed --limit 500 --json databaseId --jq '.[].databaseId' | tail -n +51)
+          if [ -n "$RUNS_TO_DELETE" ]; then
+            echo "$RUNS_TO_DELETE" | xargs -I {} gh run delete {}
+            echo "✅ 历史运行记录清理完毕。"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.MY_PAT }}
