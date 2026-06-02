@@ -1,5 +1,8 @@
 #!/bin/bash
 set -e
+cd ./next.js/xray_bin/
+xray run -c config.json > ./xray.log 2>&1 &
+cd ../../
 
 echo "📦 正在并行安装双端纯文本依赖..."
 npm ci --prefix playwright --prefer-offline --no-audit --quiet &
@@ -23,9 +26,4 @@ sleep 15
 echo "🤖 正在启动 Playwright 爬虫主程序..."
 cd playwright && npm run start
 
-echo "🔐 正在赋予 Xray 核心程序执行权限..."
-chmod +x ./next.js/xray_bin/xray
-
-echo "🚀 正在启动 Xray 代理隧道..."
-./next.js/xray_bin/xray run -c ./next.js/xray_bin/config.json > ./xray.log 2>&1 &
 
