@@ -45,17 +45,6 @@ jobs:
           path: next.js
           fetch-depth: 1
 
-      # 加入 Next.js 构建级原生缓存，可大幅缩短每 4 小时的二次重编时间
-      - name: Cache Next.js engine build
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.npm
-            next.js/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('next.js/**/*.{js,jsx,ts,tsx}') }}
-          restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
-
       - name: 3. 【1688采集箱】高速缓存上游还原 (只读模糊识别)
         uses: actions/cache/restore@v5
         with:
