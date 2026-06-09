@@ -48,7 +48,8 @@
       "activeTab",
       "clipboardWrite",
       "tabs",
-      "scripting"
+      "scripting",
+      "proxy"
    ],
    "declarative_net_request": {
       "rule_resources": [

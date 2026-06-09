@@ -27,24 +27,25 @@ export const index =
             }
             return true;//注：不写这个会出错，内容为【Unchecked runtime.lastError: The message port closed before a response was received.】
         });
-        this.a02(This)
+        proxy.init();
+        //this.a02(This)
     },
-    a02: function (This) {
-        chrome.action.onClicked.addListener(function (tab) {
-            //console.log("扩展图标被点击了!");
-            chrome.tabs.captureVisibleTab({
-                format: "png"
-            }, function (t) {
-                This.screenshot = t;
-                This.a03()
-            })
-        });
-    },
-    a03: function () {
-        chrome.tabs.create({
-            url: chrome.runtime.getURL("screenshot/screenshot.html")
-        })
-    },
+    // a02: function (This) {        
+    //     chrome.action.onClicked.addListener(function (tab) {
+    //         //console.log("扩展图标被点击了!");
+    //         chrome.tabs.captureVisibleTab({
+    //             format: "png"
+    //         }, function (t) {
+    //             This.screenshot = t;
+    //             This.a03()
+    //         })
+    //     });
+    // },
+    // a03: function () {
+    //     chrome.tabs.create({
+    //         url: chrome.runtime.getURL("screenshot/screenshot.html")
+    //     })
+    // },
     /////////////////////////
     c01: function (next) {
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
