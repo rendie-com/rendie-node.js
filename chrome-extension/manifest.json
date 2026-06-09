@@ -1,10 +1,17 @@
 {
+   "manifest_version": 3,
+   "name": "__MSG_EXTENSION_NAME__",
+   "version": "2026.5.15",
+   "default_locale": "zh_CN",
+   "description": "__MSG_EXTENSION_DESCRIPTION__",
+   "homepage_url": "https://www.rendie.com/",
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmSabvzMg7OIIuYPWSvRGzDrainmTIyvRaA0ZQ8nqY8z88z/d7AlzcVo2DjM7aycs9jGj+o2xfTDXbrYNlcmx5RnwAbZr5rZyXrQcnNzU/UqCa3+kqzqheyUwndqlnrfD4XXvwgSiCfWSiuufRrJAP4O6JnYqiZ/3l57st9BhPK4w1f1kzsV6ZykGFX90GXLXi08JKGHhw5o5gH88We2pEzWvTaifWSf0ovar4/F72y+QrLh32gx8L+ky+HpnDX7zxoU4WJTb/WaOTUJeRzh+z5UbwIRekqQRptGz7OQnhIJpMvhvRgDCDkbXInhegf6wnG5GnqQiHe3i2pBj22YbewIDAQAB",
    "action": {
       "default_icon": {
          "16": "icons/icon16.png",
          "32": "icons/icon32.png"
       },
-      "default_title": "点击可以截图"
+      "default_title": "Rendie插件 (Alt+S)"
    },
    "background": {
       "service_worker": "js/background.js",
@@ -22,9 +29,6 @@
          "run_at": "document_start"
       }
    ],
-   "default_locale": "zh_CN",
-   "homepage_url": "https://www.rendie.com/",
-   "description": "__MSG_EXTENSION_DESCRIPTION__",
    "host_permissions": [
       "<all_urls>"
    ],
@@ -35,9 +39,6 @@
       "128": "icons/icon128.png"
    },
    "devtools_page": "devtools/index.html",
-   "manifest_version": 3,
-   "name": "__MSG_EXTENSION_NAME__",
-   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmSabvzMg7OIIuYPWSvRGzDrainmTIyvRaA0ZQ8nqY8z88z/d7AlzcVo2DjM7aycs9jGj+o2xfTDXbrYNlcmx5RnwAbZr5rZyXrQcnNzU/UqCa3+kqzqheyUwndqlnrfD4XXvwgSiCfWSiuufRrJAP4O6JnYqiZ/3l57st9BhPK4w1f1kzsV6ZykGFX90GXLXi08JKGHhw5o5gH88We2pEzWvTaifWSf0ovar4/F72y+QrLh32gx8L+ky+HpnDX7zxoU4WJTb/WaOTUJeRzh+z5UbwIRekqQRptGz7OQnhIJpMvhvRgDCDkbXInhegf6wnG5GnqQiHe3i2pBj22YbewIDAQAB",
    "permissions": [
       "declarativeNetRequest",
       "downloads",
@@ -60,22 +61,20 @@
          }
       ]
    },
-   "commands": {
+  "commands": {
       "_execute_action": {
          "suggested_key": {
-            "default": "Alt + Z"
-         }
+            "default": "Alt+S",
+            "mac": "Alt+S"
+         },
+         "description": "激活该扩展程序（开启/关闭代理）"
+      },
+      "screenshot": {
+         "suggested_key": {
+            "default": "Alt+A",
+            "mac": "Alt+A"
+         },
+         "description": "触发网页截图"
       }
-   },
-   "version": "2026.5.15",
-   "web_accessible_resources": [
-      {
-         "resources": [
-            "js/inject.js"
-         ],
-         "matches": [
-            "<all_urls>"
-         ]
-      }
-   ]
+   }
 }

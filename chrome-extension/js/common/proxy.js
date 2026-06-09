@@ -1,93 +1,49 @@
 'use strict';
 
 export const proxy = {
-    isInstall: false, 
     isProxyEnabled: false,
 
-    init: function () {
-        const This = this;
+    // 1. 初始化入口（绑定点击事件、启动事件）
+    init() {
         chrome.action.onClicked.addListener(() => {
-            if (This.isProxyEnabled) {
-                // 如果当前是开启状态，点击则关闭
-                This.disable(() => {
-                    console.log("通过点击图标：代理已关闭");
-                });
+            if (this.isProxyEnabled) {
+                this.disable();
             } else {
-                const defaultPac = `
-                    function FindProxyForURL(url, host) {
-                        return "SOCKS5 127.0.0.1:10808; SOCKS 127.0.0.1:10808; DIRECT";
-                    }
-                `;
-                This.enable(defaultPac, () => {
-                    console.log("通过点击图标：代理已开启");
-                });
+                const defaultPac = 'function FindProxyForURL(url, host) { return "SOCKS5 127.0.0.1:10808; SOCKS 127.0.0.1:10808; DIRECT"; }';
+                this.enable(defaultPac);
             }
         });
 
-        // 注册开机或重启的重置逻辑
-        this.start();
+        // 监听浏览器启动，重置状态
+        chrome.runtime.onStartup.addListener(() => this.disable());
+        this.updateUI(this.isProxyEnabled);
     },
 
-    enable: function (pacScript, next) {
-        const config = {
-            mode: "pac_script",
-            pacScript: {
-                data: pacScript
-            }
-        };
-        const This = this;
-        
-        chrome.proxy.settings.set(
-            { value: config, scope: 'regular' },
-            () => {
-                This.updateUI(true);
-                if (typeof next === 'function') next();
-            }
-        );
-    },
-
-    disable: function (next) {
-        this.disableProxy(next);
-    },
-
-    start: function () {
-        const This = this;
-        // 浏览器启动时，强制重置状态，保证幂等性
-        chrome.runtime.onStartup.addListener(() => {
-            This.isProxyEnabled = false;
-            This.disableProxy();
+    // 2. 开启代理
+    enable(pacScript, next) {
+        const config = { mode: "pac_script", pacScript: { data: pacScript } };
+        chrome.proxy.settings.set({ value: config, scope: 'regular' }, () => {
+            this.updateUI(true);
+            if (next) next();
         });
     },
 
-    disableProxy: function (next) {
-        const This = this;
-        chrome.proxy.settings.clear(
-            { scope: 'regular' },
-            () => {
-                This.updateUI(false);
-                if (typeof next === 'function') next();
-            }
-        );
+    // 3. 关闭代理（原 disable 与 disableProxy 合并）
+    disable(next) {
+        chrome.proxy.settings.clear({ scope: 'regular' }, () => {
+            this.updateUI(false);
+            if (next) next();
+        });
     },
 
-    // 更新图标 UI 状态与按钮级联动
-    updateUI: function (isOn) {
+    // 4. 更新图标 UI 状态 (支持缩写判定)
+    updateUI(isOn) {
         this.isProxyEnabled = isOn;
-        if (isOn) {
-            // 开启状态：绿色 ON 标签
-            chrome.action.setBadgeText({ text: 'ON' });
-            chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' }); 
-            chrome.action.setTitle({ title: "Rendie 代理中心: 已开启" });
-        } else {
-            // 关闭状态：清除标签，显示灰色提示
-            chrome.action.setBadgeText({ text: '' }); 
-            chrome.action.setTitle({ title: "Rendie 代理中心: 已关闭" });
-        }
+        chrome.action.setBadgeText({ text: isOn ? 'ON' : 'OFF' });
+        chrome.action.setBadgeBackgroundColor({ color: isOn ? '#4CAF50' : '#999999' }); // 修复了原代码关闭时误用绿色的问题
+        chrome.action.setTitle({ title: `代理: ${isOn ? '已开启' : '已关闭'}` });
     }
-};
+}
 
-// 确保在扩展生命周期顶级同步注册安装监听器
-chrome.runtime.onInstalled.addListener(() => {
-    proxy.isProxyEnabled = false;
-    proxy.disableProxy();
-});
+// 确保在扩展安装或更新时重置状态
+chrome.runtime.onInstalled.addListener(() => proxy.disable());
