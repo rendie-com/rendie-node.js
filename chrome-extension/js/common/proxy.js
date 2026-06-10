@@ -9,7 +9,7 @@ export const proxy = {
             if (this.isProxyEnabled) {
                 this.disable();
             } else {
-                const defaultPac = 'function FindProxyForURL(url, host) { return "SOCKS5 127.0.0.1:10808; SOCKS 127.0.0.1:10808; DIRECT"; }';
+                const defaultPac = 'function FindProxyForURL(url, host) { return "SOCKS5 127.0.0.1:10809; DIRECT"; }';
                 this.enable(defaultPac);
             }
         });
