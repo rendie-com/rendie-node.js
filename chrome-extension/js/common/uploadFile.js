@@ -1,173 +1,147 @@
 'use strict';
 export const common_uploadFile = {
-    uploadFile:
-    {
+    uploadFile: {
         a01: function (url, type, headers, data, next) {
             let oo = {
-                fileArr: [],//图片数组
-                blobArr: [],//blob数组
+                fileArr: [],  // 图片 URL 数组
+                blobArr: [],  // 转换后的真实二进制 Blob 数组
                 url: url,
                 type: type,
                 headers: headers,
                 data: data,
                 next: next
-            }
+            };
             this.a02(oo);
         },
+
         a02: function (oo) {
-            let fileArr = []
+            let fileArr = [];
             for (let i = 0; i < oo.data.length; i++) {
                 if (typeof (oo.data[i].value) == "string") {
                     if (oo.data[i].value.indexOf("（二进制）") != -1) {
-                        fileArr.push(oo.data[i].value.split('（二进制）')[1])
+                        fileArr.push(oo.data[i].value.split('（二进制）')[1]);
                     }
                 }
             }
             oo.fileArr = fileArr;
-            this.a03(oo)
+            this.a03(oo);
         },
+
         a03: function (oo) {
             if (oo.fileArr.length == 0) {
-                //文件转二进制，可以上传了。
-                this.d01(oo)
-            }
-            else {
-                this.a04(oo.fileArr[0], oo)
+                // 所有文件转二进制完毕，准备组装发送
+                this.d01(oo);
+            } else {
+                // 取出队列中的第一个 URL 进行转换
+                this.a04(oo.fileArr[0], oo);
             }
         },
+
         a04: function (url, oo) {
             let This = this;
             fetch(url).then(response => {
-                // 确保请求成功
                 if (!response.ok) {
                     throw new Error('Network response was not ok ' + response.statusText);
                 }
-                return response.blob(); // 将Response转换为Blob
+                return response.blob(); 
             }).then(blob => {
-                // 处理Blob对象
+                // 【兼容性优化】只有在环境支持 revokeObjectURL 时才调用，防止报错卡死
+                if (url.startsWith('blob:')) {
+                    if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+                        URL.revokeObjectURL(url);
+                    } else if (typeof window !== 'undefined' && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        window.URL.revokeObjectURL(url);
+                    }
+                }
+                
                 This.a05(blob, oo);
             }).catch(error => {
-                console.log('There has been a problem with your fetch operation:', error);
+                console.error('Fetch 转换二进制失败:', error);
+                
+                // 【兼容性优化】异常防御处同样做环境检查
+                if (url.startsWith('blob:')) {
+                    if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+                        URL.revokeObjectURL(url);
+                    }
+                }
+                
+                // 向下传递错误，防止流程卡死
+                let nextFunc = oo.next;
+                oo = null; 
+                nextFunc({ error: error });
             });
         },
+
         a05: function (blob, oo) {
-            oo.fileArr.shift();//删除一个
-            oo.blobArr.push(blob);//添加一个
+            oo.fileArr.shift(); // 弹出已处理的 URL
+            oo.blobArr.push(blob); // 暂存对应的真实二进制数据
             this.a03(oo);
         },
-        //////////////////////////////////////////////////////
+
         d01: function (oo) {
-            //变成二进制
-            var arr = oo.data
-            const formData = new FormData()
+            var arr = oo.data;
+            const formData = new FormData();
+            
             for (var i = 0; i < arr.length; i++) {
                 if (typeof (arr[i].value) == "string") {
                     if (arr[i].value.indexOf("（二进制）") != -1) {
+                        // 替换为真实的二进制对象
                         arr[i].value = oo.blobArr[0];
-                        oo.blobArr.shift();//删除一个
+                        oo.blobArr.shift(); 
                     }
                 }
-                //////////////////////////////////////////
+                
                 if (arr[i].fileName) {
                     formData.append(arr[i].name, arr[i].value, arr[i].fileName);
-                }
-                else {
+                } else {
                     formData.append(arr[i].name, arr[i].value);
                 }
             }
             this.d02(oo, formData);
         },
+
         d02: function (oo, formData) {
-            let arr = oo.headers
+            let arr = oo.headers;
             const headers = new Headers();
             for (let i = 0; i < arr.length; i++) {
                 headers.append(arr[i].name, arr[i].value);
             }
-            /////////////////////////////
+
             fetch(oo.url, {
                 method: 'POST',
                 headers: headers,
                 body: formData
             })
-                .then(response => {
-                    if (oo.type == "json") {
-                        return response.json();
-                    }
-                    else {
-                        return response.text();
-                    }
-                })
-                .then(data => { oo.next(data) })
-                .catch(error => {
-                    oo.next({
-                        error: error
-                    })
-                });
+            .then(response => {
+                if (oo.type == "json") {
+                    return response.json();
+                } else {
+                    return response.text();
+                }
+            })
+            .then(data => { 
+                let nextFunc = oo.next;
+                
+                // 【核心优化 2】显式清空 oo 内部所有大数组，切断与大 Blob 对象的联系
+                oo.fileArr = null;
+                oo.blobArr = null;
+                oo.data = null;
+                oo = null; // 斩断闭包链
+
+                nextFunc(data); 
+            })
+            .catch(error => {
+                console.error('上传接口请求失败:', error);
+                let nextFunc = oo.next;
+                
+                // 失败时同样做显式清理
+                oo.fileArr = null;
+                oo.blobArr = null;
+                oo.data = null;
+                oo = null;
+
+                nextFunc({ error: error });
+            });
         },
     }
 }
-
-
-
-
-// a05: function (oo, formData) {
-//     let arr = oo.headers, isbool = false;//是否走监听路线。
-//     for (let i = 0; i < arr.length; i++) {
-//         if (arr[i].name == "Origin") { isbool = true; break; }
-//     }
-//     if (isbool) {
-//         alert("上传文件，好像不用【走监听路线】。")
-//         //this.e01(oo, formData);//走监听路线。
-//     }
-//     else {
-//         this.d01(oo, formData);//不走监听路线。
-//     }
-// },
-
-// //////////////////////////////////
-
-//////////////////////////////////////
-//e01: function (request, formData) {
-//    request.listener = (details) => {
-//        let arr1 = request.headers.concat(details.requestHeaders), arr2 = [], arr3 = [];
-//        for (let i = 0; i < arr1.length; i++) {
-//            if (arr2.indexOf(arr1[i].name) == -1) {
-//                arr3.push(arr1[i]);
-//                arr2.push(arr1[i].name);
-//            }
-//        }
-//        return { requestHeaders: arr3 };
-//    }
-//    let filter = {
-//        urls: [request.url],
-//        types: ["xmlhttprequest"]
-//    }
-//    chrome.webRequest.onBeforeSendHeaders.addListener(request.listener, filter, ["blocking", "requestHeaders", "extraHeaders"])
-//    this.e02(request, formData);
-//},
-//e02: function (request, formData) {
-//    $.ajax({
-//        type: 'POST',
-//        url: request.url,
-//        data: formData,
-//        timeout: 300000,
-//        async: false,
-//        processData: false,
-//        contentType: false,
-//        dataType: "json",
-//        success: function (data) {
-//            Tool.apply(data, request.next, request.This, request.t)
-//            chrome.webRequest.onBeforeSendHeaders.removeListener(request.listener)
-//        },
-//        complete: function (XMLHttpRequest, status) {
-//            if (status != 'success') {
-//                let data = {
-//                    status: status,
-//                    code: XMLHttpRequest.status,
-//                    error: XMLHttpRequest.responseText
-//                }
-//                Tool.apply(data, request.next, request.This, request.t)
-//            }
-//        }
-//    });
-//}
