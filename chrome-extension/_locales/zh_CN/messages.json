@@ -3,7 +3,7 @@
       "message": "读取您的浏览记录，屏蔽所有页面上的内容，显示通知，修改您复制和粘贴的数据，管理您的下载内容"
    },
    "EXTENSION_NAME": {
-      "message": "RenDie 插件"
+      "message": "插件"
    },
    "screenshot_plugin_announce_do_not_show": {
       "message": "不要再显示该信息"
