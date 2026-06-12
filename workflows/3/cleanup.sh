@@ -2,7 +2,7 @@
 set -e
 
 # ====================================================================
-# 0. 环境自适应：检测并补充 gh 客户端（解决 Docker 容器内缺少 gh 的问题）
+# 0. 环境自适应：检测并补充 gh 客户端，同时解决容器内 Git 权限安全报错
 # ====================================================================
 if ! command -v gh &> /dev/null; then
   echo "ℹ️ 当前运行环境处于 Playwright 容器内，缺少 gh 客户端，正在自动补全官方二进制环境..."
@@ -12,6 +12,11 @@ if ! command -v gh &> /dev/null; then
   curl -sSL "https://github.com/cli/cli/releases/download/v${GH_VER}/gh_${GH_VER}_linux_amd64.tar.gz" | tar -xz -C /usr/local --strip-components=1
   
   echo "✅ gh 客户端补全成功！"
+fi
+
+# 核心修复：解决容器用户与挂载目录所有者不一致导致的 dubious ownership 报错
+if command -v git &> /dev/null; then
+  git config --global --add safe.directory '*'
 fi
 
 echo "🧹 [开始执行自动化收尾与缓存清理]..."
@@ -41,7 +46,7 @@ fi
 # ====================================================================
 # 2. 清理历史运行记录：保持工作流面板干净整洁
 # ====================================================================
-RUNS_TO_DELETE=$(gh run list --status completed --limit 500 --json databaseId --jq '.[].databaseId' | tail -n +51)
+RUNS_TO_DELETE=$(gh run list --status completed --limit 500 --json databaseId --jq '.[].databaseId' 2>/dev/null | tail -n +51 || true)
 if [ -n "$RUNS_TO_DELETE" ]; then
   echo "🗑️ 正在清理 50 次以前的历史运行记录..."
   echo "$RUNS_TO_DELETE" | xargs -I {} gh run delete {}
