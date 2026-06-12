@@ -22,7 +22,7 @@ env:
   TARGET_DIR: "error/task3"
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   TARGET_URL: "http://localhost:3000/admin"
-  TEMPLATE: "Shopee/任务/index.js&jsFile=js02"
+  TEMPLATE: "Shopee/定时任务/index.js&jsFile=js02"
   DB_01: "sqlite3/shopee/营销中心"
   DB_02: "sqlite3/shopee/商品"
 

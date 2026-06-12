@@ -3,7 +3,7 @@ export const proxy = {
     isProxyEnabled: false,
 
     // PAC 脚本：内置本地数组控制，精准匹配与通配符双管齐下
-    defaultPac: 'function FindProxyForURL(url, host) { var directHosts = ["localhost", "127.0.0.1", "[::1]", "::1", "10.168.1.159"]; if (directHosts.indexOf(host) !== -1 || shExpMatch(host, "*.alicdn.com") || shExpMatch(host, "*.shopee.cn") || shExpMatch(host, "*.1688.com") || shExpMatch(host, "10.*")) { return "DIRECT"; } return "SOCKS5 127.0.0.1:10809; DIRECT"; }',
+    defaultPac: 'function FindProxyForURL(url, host) { var directHosts = ["localhost", "127.0.0.1", "[::1]", "::1", "10.168.1.159"]; if (directHosts.indexOf(host) !== -1 || shExpMatch(host, "*.alicdn.com") || shExpMatch(host, "*.shopee.cn") || shExpMatch(host, "*.1688.com")) { return "DIRECT"; } return "SOCKS5 127.0.0.1:10809; DIRECT"; }',
     // ==========================================
     // 1. 核心初始化入口
     // ==========================================
