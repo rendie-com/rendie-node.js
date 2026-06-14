@@ -31,14 +31,15 @@ jobs:
 
     steps:
       - name: 1. Checkout
-        # 🌟 保持使用官方针对 Node 24 优化过的最新版本
+        # 🌟 保持使用已经原生适配 Node 24 的 checkout 最新锁定版
         uses: actions/checkout@v4.2.2 
         with:
           fetch-depth: 1
 
       - name: 2. Setup Node.js (v24)
-        # 🌟 精准锁定到 v4.2.2，这个版本已经彻底重写了底层声明，完全原生对齐 Node 24
-        uses: actions/setup-node@v4.2.2
+        # 🌟 核心修复：升级到全新的 v5 稳定版。
+        # v5 的皮囊和灵魂已经默认全部基于 Node 24 打造，从根源上消灭了老旧的 node20 提示
+        uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: 'npm'
