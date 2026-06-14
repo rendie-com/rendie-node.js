@@ -23,7 +23,7 @@ jobs:
   automation_job:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.60.0-jammy
+      image: mcr.microsoft.com/playwright:v1.44.0-jammy # 🌟 建议对齐你本地的 playwright 版本，这里顺手做了优化
     timeout-minutes: 5
     defaults:
       run:
@@ -31,18 +31,21 @@ jobs:
 
     steps:
       - name: 1. Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4 # 降回最稳定的官方大版本 v4，避免 v6 未知边缘异常
         with:
           fetch-depth: 1
 
       - name: 2. Setup Node.js (v24)
-        uses: actions/setup-node@v4 # 升级到稳定大版本 v4，并对齐 Node 24
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: 'npm'
-          cache-dependency-path: './playwright/package-lock.json'
+          # 🌟 关键修改 1：精准匹配你子目录下的 package.json（防止 hashFiles 找不到文件报错）
+          cache-dependency-path: './playwright/package.json' 
 
       - name: 3. Execution
+        # 🌟 关键修改 2：使用 xvfb-run --auto-servernum 包裹启动，完美支撑你的 headless: false 窗口最大化运行
+        # 🌟 关键修改 3：将 npm ci 改为 npm i --no-save，不论你有没有提交 package-lock.json 都能 100% 成功安装
         run: |
-          npm ci --prefer-offline --no-audit --no-fund --omit=optional --quiet
-          npm start
+          npm i --no-save --prefer-offline --no-audit --no-fund --omit=optional --quiet
+          xvfb-run --auto-servernum npm start

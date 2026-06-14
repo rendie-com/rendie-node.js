@@ -3,11 +3,10 @@
 import { chromium } from 'playwright';
 import { state, isCI } from './config.mjs';
 import { handleFatalError } from './errorPage.mjs';
-import { background } from './common/background.mjs';
 import path from 'path';
 
 /**
- * 初始化防检测与跨进程桥接网关
+ * 初始化防检测网关
  * @param {import('playwright').Page} page - Playwright 页面实例
  */
 export async function initBridge(page) {
@@ -44,29 +43,6 @@ export async function initBridge(page) {
     delete window.__webdriver_evaluate;
     delete window.__selenium_evaluate;
   });
-
-  // 📡 注册跨进程传输桥梁：将网页端的 nodeBridge 消息打通至 Node.js 中央路由器
-  await page.exposeFunction('nodeBridge', async (request) => {
-    try {
-      // 通过统一通信协议直接转发至后台业务中央分发器
-      const result = await background.a01(request);
-      return { status: 'success', data: result };
-    } catch (err) {
-      console.error(`❌ 后端中央路由器执行 [${request.action}] 失败:`, err);
-      return { status: 'error', msg: err.toString() };
-    }
-  });
-
-  // 🔀 前端 DOM 自定义事件监听与响应机制配置 (rendie-req-dispatch通道)
-  await page.addInitScript(() => {
-    window.addEventListener('rendie-req-dispatch', async (e) => {
-      const request = e.detail;
-      const result = await window.nodeBridge(request);
-      window.dispatchEvent(new CustomEvent('rendie-res-dispatch', {
-        detail: { requestId: request.requestId, ...result }
-      }));
-    }, false);
-  });
 }
 
 /**
@@ -78,16 +54,15 @@ export async function ensurePage() {
 
   // 📂 指定本地浏览器持久化缓存指纹目录
   const userDataDir = path.resolve('./.rendie_chrome_profile');
+  const pluginDir = path.resolve('../chrome-extension');
   
   // 🌟 融合了工业级反指纹风控及高强跨域沙箱关闭的持久化配置选项
   const persistentOptions = {
-    headless: isCI, // 🌟 100% 还原为你要求的原版变量写法
-    viewport: { width: 1440, height: 900 },
+    headless: false, 
+    // 🌟 释放视口约束，使页面完美铺满由 --start-maximized 撑开的浏览器大窗
+    viewport: null, 
     locale: 'zh-CN',
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    deviceScaleFactor: 1,
-    hasTouch: false,
-    isMobile: false,
 
     // 🛡️【强效跨域及内容安全策略豁免】配合 args 内的命令，解除跨域同源提取锁定
     bypassCSP: true,
@@ -95,11 +70,16 @@ export async function ensurePage() {
     // 🚀【高级防风控启动沙箱参数】
     args: [
       '--no-sandbox',
+      `--disable-extensions-except=${pluginDir}`,
+      `--load-extension=${pluginDir}`,
       '--disable-gpu',
       '--lang=zh-CN,zh;q=0.9',
       '--disable-blink-features=AutomationControlled', // 抹除底层受控特征
       '--disable-infobars',
       '--no-default-browser-check',
+
+      // 🌟 核心：启动时强制命令浏览器窗口最大化
+      '--start-maximized', 
 
       // 🌟【降维打击网络沙箱限制】：解除源隔离与域隔离限制
       '--disable-web-security',
@@ -111,7 +91,7 @@ export async function ensurePage() {
         '--disable-setuid-sandbox',
         '--hide-scrollbars',
         '--mute-audio'
-      ] : ['--start-maximized'])
+      ] : [])
     ]
   };
 
@@ -122,7 +102,7 @@ export async function ensurePage() {
   const pages = context.pages();
   state.page = pages.length > 0 ? pages[0] : await context.newPage();
 
-  // 注入核心防检测及 DOM 双向消息异步调度网关
+  // 注入核心防检测网关
   await initBridge(state.page);
 
   // 🚨 严格核心 resource 拦截器
