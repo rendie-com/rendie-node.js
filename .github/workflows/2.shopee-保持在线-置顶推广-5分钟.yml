@@ -23,7 +23,8 @@ jobs:
   automation_job:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.44.0-jammy
+      # 🌟 核心修改点：完美对齐你的 package.json 依赖，升级到 v1.60.0 正式版镜像
+      image: mcr.microsoft.com/playwright:v1.60.0-jammy 
     timeout-minutes: 5
     defaults:
       run:
@@ -31,14 +32,11 @@ jobs:
 
     steps:
       - name: 1. Checkout
-        # 🌟 保持使用已经原生适配 Node 24 的 checkout 最新锁定版
         uses: actions/checkout@v4.2.2 
         with:
           fetch-depth: 1
 
       - name: 2. Setup Node.js (v24)
-        # 🌟 核心修复：升级到全新的 v5 稳定版。
-        # v5 的皮囊和灵魂已经默认全部基于 Node 24 打造，从根源上消灭了老旧的 node20 提示
         uses: actions/setup-node@v5
         with:
           node-version: 24
