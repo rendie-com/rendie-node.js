@@ -21,7 +21,7 @@ env:
   MAX_RUNTIME_MINUTES: 30
   TARGET_DIR: "error/task3"
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
-  TARGET_URL: "http://localhost:3000/admin"
+  TARGET_URL: "http://localhost:3000/admin" 
   TEMPLATE: "Shopee/定时任务/index.js&jsFile=js02"
   DB_01: "sqlite3/shopee/营销中心"
   DB_02: "sqlite3/shopee/商品"
@@ -30,7 +30,7 @@ jobs:
   automation_and_backup:
     runs-on: ubuntu-latest
     container:
-      image: mcr.microsoft.com/playwright:v1.60.0-jammy
+      image: mcr.microsoft.com/playwright:v1.60.0-jammy 
     timeout-minutes: 60 
     steps:
       - name: 1. 下载主程序代码
@@ -68,20 +68,20 @@ jobs:
         run: bash workflows/3/db_sync.sh
 
       - name: 6. 环境准备 (Node.js 24)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: 'npm'
           cache-dependency-path: |
-            playwright/package-lock.json
-            next.js/package-lock.json
+            playwright/package.json
+            next.js/package.json
 
       - name: 7. 构建并运行生产环境 (调用外部脚本)
         env:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
           NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
-        run: bash workflows/3/run_prod.sh
+        run: xvfb-run --auto-servernum bash workflows/3/run_prod.sh
 
       - name: 8. 增量推送至远程备份仓库 (调用外部脚本)
         if: always() 
