@@ -18,8 +18,6 @@ env:
   TARGET_DIR: "error/task2"
   TARGET_URL: "https://www.rendie.com/admin"
   TEMPLATE: "Shopee/定时任务/index.js&jsFile=js02"
-  # 🌟【核心修复 1】：在这里提前强制开启 Node.js 24 引擎，直接把这个 Deprecated 警告永久干掉
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
 
 jobs:
   automation_job:
@@ -33,12 +31,14 @@ jobs:
 
     steps:
       - name: 1. Checkout
-        uses: actions/checkout@v4.2.2 # 🌟【核心修复 2】：锁定 v4 的最新修正版，完美原生兼容 Node 24
+        # 🌟 保持使用官方针对 Node 24 优化过的最新版本
+        uses: actions/checkout@v4.2.2 
         with:
           fetch-depth: 1
 
       - name: 2. Setup Node.js (v24)
-        uses: actions/setup-node@v4
+        # 🌟 精准锁定到 v4.2.2，这个版本已经彻底重写了底层声明，完全原生对齐 Node 24
+        uses: actions/setup-node@v4.2.2
         with:
           node-version: 24
           cache: 'npm'
