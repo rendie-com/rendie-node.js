@@ -69,7 +69,7 @@ jobs:
 
       - name: 6. 执行流水线并热启动生产环境 (调用外部脚本)
         env:
-          NEXT_PUBLIC_DEFAULT_DB: "pg02" 
+          NEXT_PUBLIC_DEFAULT_DB: "pg" 
           NEXT_CONFIG_SQLITE: "../sqlite3/{database}.db"
           NEXT_CONFIG_PG: ${{ secrets.NEXT_CONFIG_PG }}
         run: xvfb-run --auto-servernum bash workflows/4/run_prod.sh
