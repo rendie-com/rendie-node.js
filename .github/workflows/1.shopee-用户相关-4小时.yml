@@ -79,8 +79,8 @@ jobs:
       - name: 7. 执行流水线并热启动生产环境 (调用外部脚本)
         env:
           NEXT_PUBLIC_DEFAULT_DB: "pg02" 
-          NEXTJS_CONFIG_SQLITE: "../sqlite3/{database}.db"
-          NEXTJS_CONFIG_PG02: ${{ secrets.NEXTJS_CONFIG_PG02 }}
+          NEXT_CONFIG_SQLITE: "../sqlite3/{database}.db"
+          NEXT_CONFIG_PG: ${{ secrets.NEXT_CONFIG_PG }}
         run: xvfb-run --auto-servernum bash workflows/1/run_prod.sh
 
       - name: 8. 周期性增量异地归档 (调用外部脚本)
