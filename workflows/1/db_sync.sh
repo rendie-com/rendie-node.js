@@ -22,3 +22,14 @@ else
   cp -af temp_db02/$DB_02/. "$DB_02/"
   rm -rf temp_db02
 fi
+
+# 检查 DB_03 (商品)
+if [ -d "$DB_03" ] && [ "$(ls -A "$DB_03" 2>/dev/null)" ]; then
+  echo "✅ [DB_03] 历史缓存加载成功。"
+else
+  echo "⚠️ [DB_03] 缓存为空，从远程同步历史..."
+  git clone --depth 1 "https://x-access-token:${MY_PAT}@github.com/rendie-com/rendie-sqlite3-shopee-product" temp_db03
+  mkdir -p "$DB_03"
+  cp -af temp_db03/$DB_03/. "$DB_03/"
+  rm -rf temp_db03
+fi

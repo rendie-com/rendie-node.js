@@ -2,7 +2,7 @@
 set -e
 
 # ====================================================================
-# 0. 容器级环境健壮性防御
+#  容器级环境健壮性防御
 # ====================================================================
 if ! command -v gh &> /dev/null; then
   echo "ℹ️ 检测到 Playwright 独立沙盒环境，缺少主机 gh 引擎，开始静默灌注官方最新二进制..."
@@ -28,7 +28,7 @@ else
 fi
 
 # ====================================================================
-# 2. 动态剥离过期的【聊聊】缓存层
+#  动态剥离过期的【聊聊】缓存层
 # ====================================================================
 OLD_CHAT_CACHES=$(gh cache list --limit 100 --json id,key --jq '[.[] | select(.key | startswith("shopee-chat-"))] | .[1:] | .[].id' 2>/dev/null || true)
 if [ -n "$OLD_CHAT_CACHES" ]; then
@@ -36,6 +36,15 @@ if [ -n "$OLD_CHAT_CACHES" ]; then
   echo "$OLD_CHAT_CACHES" | xargs -I {} gh cache delete {}
 else
   echo "ℹ️ 【聊聊】历史空间完美纯净。"
+fi
+
+# 清理 shopee-product- 的旧缓存
+OLD_PRODUCT_CACHES=$(gh cache list --limit 100 --json id,key --jq '[.[] | select(.key | startswith("shopee-product-"))] | .[1:] | .[].id' 2>/dev/null || true)
+if [ -n "$OLD_PRODUCT_CACHES" ]; then
+  echo "🗑️ 发现过期的【商品】旧缓存，正在清理..."
+  echo "$OLD_PRODUCT_CACHES" | xargs -I {} gh cache delete {}
+else
+  echo "ℹ️ 【商品】无多余旧缓存，无需清理。"
 fi
 
 # ====================================================================
