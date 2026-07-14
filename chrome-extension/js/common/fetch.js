@@ -2,7 +2,10 @@
 'use strict';
 export const http = {
     getFetch: function (url,type, next) {
-        fetch(url).then(response => {
+        fetch(url, {
+            method: 'GET',
+            credentials: 'include' 
+        }).then(response => {
             if(type=="json"){
                 return response.json();
             }

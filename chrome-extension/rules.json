@@ -39,7 +39,9 @@
     },
     "condition": {
       "urlFilter": "||h5api.m.1688.com/h5/mtop.1688.trading.dataline.service/1.0",
-      "resourceTypes": ["xmlhttprequest"]
+      "resourceTypes": [
+        "xmlhttprequest"
+      ]
     }
   },
   {
@@ -72,7 +74,9 @@
     },
     "condition": {
       "urlFilter": "||seller.shopee.cn/api/mkt/cmt/nominated/nominated_entity_list",
-      "resourceTypes": ["xmlhttprequest"]
+      "resourceTypes": [
+        "xmlhttprequest"
+      ]
     }
   },
   {
@@ -132,7 +136,49 @@
     },
     "condition": {
       "urlFilter": "||translate-pa.googleapis.com/v1/translateHtml",
-      "resourceTypes": ["xmlhttprequest"]
+      "resourceTypes": [
+        "xmlhttprequest"
+      ]
+    }
+  },
+  {
+    "id": 5,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        {
+          "header": "Sec-Fetch-Dest",
+          "operation": "set",
+          "value": "document"
+        },
+        {
+          "header": "Sec-Fetch-Mode",
+          "operation": "set",
+          "value": "navigate"
+        },
+        {
+          "header": "Sec-Fetch-Site",
+          "operation": "set",
+          "value": "none"
+        },
+        {
+          "header": "Accept",
+          "operation": "set",
+          "value": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+        },
+        {
+          "header": "Upgrade-Insecure-Requests",
+          "operation": "set",
+          "value": "1"
+        }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||detail.1688.com/offer/*",
+      "resourceTypes": [
+        "xmlhttprequest"
+      ]
     }
   }
 ]

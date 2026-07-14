@@ -55,7 +55,8 @@
    },
    "devtools_page": "devtools/index.html",
    "permissions": [
-      "declarativeNetRequest",
+      "declarativeNetRequest",      
+      "declarativeNetRequestWithHostAccess",
       "downloads",
       "notifications",
       "storage",
