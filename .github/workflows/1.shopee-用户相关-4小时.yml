@@ -18,7 +18,7 @@ env:
   TZ: Asia/Shanghai
   NODE_USERNAME: "4hour"
   NODE_ACCESS_TOKEN: ${{ secrets.NODE_ACCESS_TOKEN_1 }}
-  MAX_RUNTIME_MINUTES: 60
+  MAX_RUNTIME_MINUTES: 1
   TARGET_DIR: "error/task1"
   GITHUB_TOKEN: ${{ secrets.MY_PAT }}
   TARGET_URL: "http://localhost:3000/admin" 
@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-jammy
-    timeout-minutes: 3 
+    timeout-minutes: 80 
     steps:
       - name: 1. 主代码基础检出
         uses: actions/checkout@v6
