@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-jammy
-    timeout-minutes: 1 
+    timeout-minutes: 3 
     steps:
       - name: 1. 主代码基础检出
         uses: actions/checkout@v6
