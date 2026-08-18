@@ -67,6 +67,11 @@ jobs:
           MY_PAT: ${{ secrets.MY_PAT }}
         run: bash workflows/3/db_sync.sh
 
+      - name: 5.1 安装原生模块构建依赖 (解决 make 缺失)
+        run: |
+          apt-get update
+          apt-get install -y build-essential python3
+
       - name: 6. 环境准备 (Node.js 24)
         uses: actions/setup-node@v5
         with:
