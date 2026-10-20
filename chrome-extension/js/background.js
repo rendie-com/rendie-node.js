@@ -5,6 +5,7 @@ import { proxy } from './common/proxy.js';
 import { http } from './common/fetch.js';
 import { common_cookies } from './common/cookies.js';
 import { common_tabs } from './common/tabs.js';
+import { common_debugger } from './common/debugger.js';
 import { common_uploadFile } from './common/uploadFile.js';
 
 export const index =
@@ -70,7 +71,10 @@ export const index =
                 common_tabs.tabs_executeScript_indexOf.a01(request.index, request.windowId, request.code, request.htmlArr, request.isHighlightTab, next);
                 break;
             case "tabs_executeScript_devtools_indexOf"://执行js代码后再找内容(返回网页内容) --- 要打开“开发者工具“ 
-                common_tabs.tabs_executeScript_devtools_indexOf.a01(request.index, request.windowId, request.fileArr, request.code, request.htmlArr, request.isHighlightTab, next);
+                common_tabs.tabs_executeScript_devtools_indexOf.a01(request.index, request.windowId, request.code, request.htmlArr, request.isHighlightTab, next);
+                break;
+            case "tabs_executeScript_debugger_indexOf":
+                common_debugger.tabs_executeScript_debugger_indexOf.a01(request.index, request.windowId, request.code, request.htmlArr, request.isHighlightTab, next)
                 break;
             //case "tabs_executeScript": //执行js代码(立马返回值取到的内容) 
             //     Tool.tabs_executeScript.a01(request.index, request.windowId, request.fileArr, request.code, request.isHighlightTab, next);

@@ -3,8 +3,8 @@ var fun =
     a01: function () {
         var This = this
         chrome.runtime.onMessage.addListener(function (request, sender, next) {
-            //console.log('【rendie-com/devtools/index.js】收到消息',request);
             if (request.cmd == "content-script-rendie-com-devtools") {
+                //console.log('【rendie-com/devtools/index.js】收到消息', request);
                 switch (request.action) {
                     case "onRequestFinished": This.onRequestFinished(request.htmlArr, next); break;//打开监听器，找到内容就回返。
                     default: next("出错:action=" + request.action);
@@ -61,6 +61,7 @@ var fun =
             request.getContent((content) => {
                 let isbool = This.b01(request.request.url, request.request.postData, content, htmlArr)
                 if (isbool) {
+                    //console.log("已找到URL:" + request.request.url)
                     nArr.push(JSON.parse(content));//这个数组有什么用？答：可以打开一个网页，获取多个链接的内容。
                     if (nArr.length == htmlArr.length) {
                         chrome.devtools.network.onRequestFinished.removeListener(handleUpdated);//移除监听器

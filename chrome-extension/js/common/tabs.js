@@ -36,57 +36,62 @@ export const common_tabs = {
         },
     },
     /////////////////////////////////////////
-    tabs_executeScript_devtools_indexOf: {
-        //注：这里devtools必须是打开的。
+    tabs_executeScript_devtools_indexOf: {        
         a01: function (index, windowId,  code, htmlArr, isHighlightTab, next) {
-            let o1 = {
-                index: index,
-                windowId: windowId,               
-                code:code,
-            },o2={
-                htmlArr: htmlArr,
-                isHighlightTab: isHighlightTab,
-                next: next
-            }
-            this.a02(o1,o2);
+            this.a02( {
+                index,
+                windowId,               
+                code,
+                htmlArr,
+                isHighlightTab,
+                next
+            });
         },
-        a02: function (o1,o2) { 
-            let data = {
+        a02: function (oo) { 
+            //是否已打开Devtools页面。
+            if (common_tabs.isOpenDevtools) {
+                this.a03(oo)
+            }
+            else {
+                common.Time("name", 500, this.a02, this, oo);
+            }
+        },
+        a03: function (oo) {             
+            const data = {
                 cmd: "content-script-rendie-com-devtools",
                 action: "onRequestFinished",
-                htmlArr: o2.htmlArr,
+                htmlArr: oo.htmlArr,
             }
-            chrome.runtime.sendMessage(data, function (r) { 
-                common_tabs.isHighlightTab(r,o2.isHighlightTab, o1.windowId,o2.next);              
-            });
             common_tabs.isOnRequestFinished = false;
-            this.a03(o1)
+            chrome.runtime.sendMessage(data, function (r) { 
+                common_tabs.isHighlightTab(r,oo.isHighlightTab, oo.windowId,oo.next);              
+            });            
+            this.a04(oo)
         },
-        a03: function (oo) {
+        a04: function (oo) {
             //是否已打开监听器
-            if (common_tabs.isOnRequestFinished) {                
+            if (common_tabs.isOnRequestFinished) {    
                 common_tabs.executeScript.a01(oo.index, oo.windowId,  oo.code)//执行JS
             }
             else {
-                common.Time("name", 1, this.a03, this, oo);
+                common.Time("name", 100, this.a04, this, oo);
             }
         },       
     },
     ////////////////////////////////////////////////////////////////////////
     tabs_remove_create_devtools_indexOf: {
-        a01: function (index, windowId, url, htmlArr, isHighlightTab, next) {
-            let oo = {
-                index: index,
-                windowId: windowId,
-                url: url,
-                htmlArr: htmlArr,
-                isHighlightTab: isHighlightTab,
-                next: next,
+        a01: function (index, windowId, url, htmlArr, isHighlightTab, next) {           
+            common_tabs.isOpenDevtools = false;
+            common.tabs_remove(index, windowId, this.a02, this, {
+                index,
+                windowId,
+                url,
+                htmlArr,
+                isHighlightTab,
+                next,
                 /////////////////////////////////
                 id: 0,
-            }
-            common_tabs.isOpenDevtools = false;
-            common.tabs_remove(index, windowId, this.a02, this, oo)//删除【index】选项卡，直到找不到【index】为止
+            })//删除【index】选项卡，直到找不到【index】为止
         },
         a02: function (oo) {
             //创建【index】选项卡，直到找到【index】为止

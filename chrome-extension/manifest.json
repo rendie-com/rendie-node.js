@@ -55,6 +55,7 @@
    },
    "devtools_page": "devtools/index.html",
    "permissions": [
+      "debugger",
       "declarativeNetRequest",      
       "declarativeNetRequestWithHostAccess",
       "downloads",
