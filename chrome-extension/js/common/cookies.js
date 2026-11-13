@@ -2,24 +2,24 @@
 'use strict';
 export const common_cookies = {
     //获取所有cookie信息
-    delAllCookies: function (urlArr, next) {
+    delAllCookies: function (urls, next) {
         let This = this;
-        chrome.cookies.getAll({ url: urlArr[0] },
+        chrome.cookies.getAll({ url: urls[0] },
             function (cookies) {
                 ///////////////////////////////////
                 for (let i = 0; i < cookies.length; i++) {
                     chrome.cookies.remove({
-                        url: urlArr[0],
+                        url: urls[0],
                         name: cookies[i].name
                     });
                 }
                 /////////////////////////////////////
-                urlArr.shift();
-                if (urlArr.length == 0) {
-                    next();
+                urls.shift();
+                if (urls.length == 0) {
+                    next(true);
                 }
                 else {
-                    This.delAllCookies(urlArr, next);
+                    This.delAllCookies(urls, next);
                 }
                 ///////////////////////////////////////
             }
@@ -105,21 +105,21 @@ export const common_cookies = {
         processNext();
     },
     //获取所有cookie信息
-    getAllCookies: function (urlArr, cookiesArr, next) {
+    getAllCookies: function (urls, cookiesArr, next) {
         let This = this;
-        chrome.cookies.getAll({ url: urlArr[0] },
+        chrome.cookies.getAll({ url: urls[0] },
             function (cookies) {
                 cookiesArr.push({
-                    url: urlArr[0],
+                    url: urls[0],
                     cookies: cookies
                 })
-                urlArr.shift();
+                urls.shift();
                 //////////////////////////////
-                if (urlArr.length == 0) {
+                if (urls.length == 0) {
                     next(cookiesArr);
                 }
                 else {
-                    This.getAllCookies(urlArr, cookiesArr, next);
+                    This.getAllCookies(urls, cookiesArr, next);
                 }
             }
         );
@@ -150,7 +150,7 @@ export const common_cookies = {
 //{
 //    chrome.cookies.set({ url: request.url, name: request.name, value: request.value },
 //        function () {
-//            request.next();
+//            request.next(true);
 //        }
 //    );
 //},

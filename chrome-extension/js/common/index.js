@@ -63,16 +63,15 @@ export const common = {
     /////查找，直到找到后才返回/////////////////////////////////////////////
     tabs_indexOf: {
         a01: function (index, windowId, htmlArr, next, This, t) {
-            let oo = {
-                index: index,
-                windowId: windowId,
-                htmlArr: htmlArr,
-                next: next,
-                This: This,
-                t: t,
+            this.a02({
+                index,
+                windowId,
+                htmlArr,
+                next,
+                This,
+                t,
                 count: 0
-            }
-            this.a02(oo)
+            })
         },
         a02: function (oo)//查找，直到找到为止
         {

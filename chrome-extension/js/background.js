@@ -5,26 +5,32 @@ import { proxy } from './common/proxy.js';
 import { http } from './common/fetch.js';
 import { common_cookies } from './common/cookies.js';
 import { common_tabs } from './common/tabs.js';
-import { common_debugger } from './common/debugger.js';
+import { tabs_executeScript_debugger_indexOf } from './common/tabs_executeScript_debugger_indexOf.js';
+import { tabs_remove_create_debugger_indexOf } from './common/tabs_remove_create_debugger_indexOf.js';
 import { common_uploadFile } from './common/uploadFile.js';
 
 export const index =
 {
     screenshot: "",//截图的图片，暂时存放在这。
     a01: function () {
-
-        let This = this;
+        const This = this;
         chrome.runtime.onMessage.addListener(function (request, sender, next) {
             if (request.cmd == 'content-script-rendie-com')//表是只接收【content-script】的信息。
-            {
-                //console.log('【rendie/js/background.js】收到消息', request);
+            {                
+                request.windowId = sender.tab.windowId;//这个一定要加，否则在删除“选项卡”时，所有的窗口都会删除。
+                //console.log('【rendie/js/background.js】收到消息', request, sender);
                 switch (request.id) {
                     case "load_screenshot": next(This.screenshot); break;
                     case "close_screenshot_window": This.c01(next); break;
-                    case "isOpenDevtools": common_tabs.isOpenDevtools = true; next(); break;//是否已打开Devtools页面。
-                    case "isOnRequestFinished": common_tabs.isOnRequestFinished = true; next(); break;//已打开监听器。
                     case "isRD": next(true); break;
-                    default: This.d01(request, next); break;
+                    default:
+                        try {
+                            This.d01(request, next);
+                        } catch (error) {
+                            console.log(error);
+                            next("谷歌扩展报错")
+                        }
+                        break;
                 }
             }
             return true;//注：不写这个会出错，内容为【Unchecked runtime.lastError: The message port closed before a response was received.】
@@ -53,7 +59,7 @@ export const index =
     c01: function (next) {
         chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
             chrome.tabs.remove(tabs[0].id, function () {
-                next()
+                next(true)
             });
         });
     },
@@ -64,17 +70,17 @@ export const index =
             case "tabs_remove_create_indexOf"://删除后创建再查找(返回网页内容)
                 common_tabs.tabs_remove_create_indexOf.a01(request.index, request.windowId, request.url, request.htmlArr, request.isHighlightTab, next);
                 break;
-            case "tabs_remove_create_devtools_indexOf"://删除后创建再查找(返回网页内容)  --- 要打开“开发者工具“ 
-                common_tabs.tabs_remove_create_devtools_indexOf.a01(request.index, request.windowId, request.url, request.htmlArr, request.isHighlightTab, next);
+            case "tabs_remove_create_debugger_indexOf"://删除后创建再查找(返回网页内容)
+                tabs_remove_create_debugger_indexOf.a01(request.index, request.windowId, request.url, request.htmlArr, request.isHighlightTab, next);
                 break;
             case "tabs_executeScript_indexOf"://执行js代码后再找内容(返回网页内容)
                 common_tabs.tabs_executeScript_indexOf.a01(request.index, request.windowId, request.code, request.htmlArr, request.isHighlightTab, next);
                 break;
-            case "tabs_executeScript_devtools_indexOf"://执行js代码后再找内容(返回网页内容) --- 要打开“开发者工具“ 
-                common_tabs.tabs_executeScript_devtools_indexOf.a01(request.index, request.windowId, request.code, request.htmlArr, request.isHighlightTab, next);
+            case "tabs_executeScript_param_indexOf"://执行参数后再找内容(返回网页内容)
+                common_tabs.tabs_executeScript_param_indexOf.a01(request.index, request.windowId, request.param, request.htmlArr, request.isHighlightTab, next);
                 break;
             case "tabs_executeScript_debugger_indexOf":
-                common_debugger.tabs_executeScript_debugger_indexOf.a01(request.index, request.windowId, request.code, request.htmlArr, request.isHighlightTab, next)
+                tabs_executeScript_debugger_indexOf.a01(request.index, request.windowId, request.code, request.htmlArr, request.isHighlightTab, next)
                 break;
             //case "tabs_executeScript": //执行js代码(立马返回值取到的内容) 
             //     Tool.tabs_executeScript.a01(request.index, request.windowId, request.fileArr, request.code, request.isHighlightTab, next);
@@ -82,9 +88,9 @@ export const index =
             ///////////js/common/tabs.js 结束/////////////////////////////////////////////
             ////////////////////////////////////////////////////////////////////////////////////
             ///////////common_cookies.js  开始//////////////////////////////////////////////////
-            case "delAllCookies": common_cookies.delAllCookies(request.urlArr, next); break;//删除所有cookie信息
+            case "delAllCookies": common_cookies.delAllCookies(request.urls, next); break;//删除所有cookie信息
             case "setAllCookies": common_cookies.setAllCookies(request.cookiesArr, next); break;//设置所有cookie信息
-            case "getAllCookies": common_cookies.getAllCookies(request.urlArr, [], next); break;//获取所有cookie信息
+            case "getAllCookies": common_cookies.getAllCookies(request.urls, [], next); break;//获取所有cookie信息
             case "getCookies": common_cookies.getCookies(request.url, request.name, request.partitionKey, next); break;//获取单个cookie信息----(注：这里多了一个【partitionKey】，有的不加这个获取不到值)
             // //case "setCookies": Tool.setCookies(request); break;//设置单个cookie信息
             case "delCookies": common_cookies.delCookies(request.url, request.name, next); break;//删除单个cookie信息
